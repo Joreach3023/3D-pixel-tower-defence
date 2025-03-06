@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Tower Defense</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas { 
+            display: block; 
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            user-select: none;
+        }
+        #tower-selection {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .tower-button {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .tower-button:hover {
+            background-color: rgba(50, 50, 50, 0.7);
+        }
+        .tower-button.selected {
+            border-color: yellow;
+            background-color: rgba(100, 100, 50, 0.7);
+        }
+        #start-wave {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #start-wave:hover {
+            background-color: rgba(0, 150, 0, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>Gold: <span id="gold">100</span></div>
+        <div>Lives: <span id="lives">20</span></div>
+        <div>Wave: <span id="wave">0</span>/25</div>
+    </div>
+    <div id="tower-selection">
+        <div class="tower-button" data-type="laser" data-cost="50">Laser Tower<br>$50</div>
+        <div class="tower-button" data-type="cannon" data-cost="75">Cannon Tower<br>$75</div>
+        <div class="tower-button" data-type="sniper" data-cost="100">Sniper Tower<br>$100</div>
+    </div>
+    <button id="start-wave">Start Wave</button>
+
+    <!-- Three.js and Post-Processing Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+    <script>
+        // Game state
+        const gameState = {
+            gold: 100,
+            lives: 20,
+            currentWave: 0,
+            waveInProgress: false,
+            selectedTower: null,
+            towers: [],
+            enemies: [],
+            projectiles: []
+        };
+
+        // Tower types
+        const towerTypes = {
+            laser: {
+                cost: 50,
+                damage: 1,
+                range: 5,
+                fireRate: 0.5, // seconds between shots
+                color: 0xff0000,
+                upgradeLevel: 0,
+                upgrades: [
+                    { cost: 75, damage: 2, range: 5, fireRate: 0.5 },
+                    { cost: 125, damage: 2, range: 5, fireRate: 0.3 },
+                    { cost: 200, damage: 3, range: 6, fireRate: 0.3 }
+                ]
+            },
+            cannon: {
+                cost: 75,
+                damage: 3,
+                range: 3,
+                fireRate: 1.2,
+                splashRadius: 1.5,
+                color: 0x0000ff,
+                upgradeLevel: 0,
+                upgrades: [
+                    { cost: 100, damage: 3, range: 3, fireRate: 1.2, splashRadius: 2.5 },
+                    { cost: 150, damage: 5, range: 3, fireRate: 1.2, splashRadius: 2.5 },
+                    { cost: 250, damage: 8, range: 4, fireRate: 1.0, splashRadius: 3.5 }
+                ]
+            },
+            sniper: {
+                cost: 100,
+                damage: 8,
+                range: 10,
+                fireRate: 2.0,
+                color: 0x00ff00,
+                upgradeLevel: 0,
+                upgrades: [
+                    { cost: 125, damage: 12, range: 12, fireRate: 2.0 },
+                    { cost: 175, damage: 12, range: 15, fireRate: 1.8 },
+                    { cost: 300, damage: 15, range: 18, fireRate: 1.8 }
+                ]
+            }
+        };
+
+        // Enemy types
+        const enemyTypes = {
+            square: {
+                health: 10,
+                speed: 2,
+                reward: 10,
+                damage: 1, // lives lost when reaching exit
+                color: 0xff0000,
+                size: 0.7
+            },
+            circle: {
+                health: 5,
+                speed: 3.5,
+                reward: 5,
+                damage: 1,
+                color: 0x00ffff,
+                size: 0.5
+            },
+            triangle: {
+                health: 20,
+                speed: 1.5,
+                reward: 20,
+                damage: 2,
+                color: 0xffff00,
+                size: 0.8
+            },
+            pentagon: {
+                health: 50,
+                speed: 1,
+                reward: 50,
+                damage: 5,
+                color: 0xff00ff,
+                size: 1
+            }
+        };
+
+        // Wave definitions
+        const waves = generateWaves();
+
+        // Setup scene
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+        
+        // Setup camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 15, 15);
+        
+        // Setup renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Add orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 5;
+        controls.maxDistance = 30;
+        controls.maxPolarAngle = Math.PI / 2;
+        
+        // Create lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+
+        // Day-Night Cycle Light
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
+
+        // Post-Processing Setup
+        let composer;
+        function setupPostProcessing() {
+            composer = new THREE.EffectComposer(renderer);
+            const renderPass = new THREE.RenderPass(scene, camera);
+            composer.addPass(renderPass);
+
+            const bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.5, // Strength
+                0.4, // Radius
+                0.85 // Threshold
+            );
+            composer.addPass(bloomPass);
+        }
+        setupPostProcessing();
+
+        // Setup game grid
+        const gridSize = 20;
+        const cellSize = 1;
+        const grid = [];
+        
+        // Create grid of terrain
+        const terrainGeometry = new THREE.BoxGeometry(cellSize, 0.2, cellSize);
+        const terrainMaterials = {
+            grass: new THREE.MeshLambertMaterial({ color: 0x7CFC00 }),
+            water: new THREE.MeshLambertMaterial({ color: 0x4169E1 }),
+            rock: new THREE.MeshLambertMaterial({ color: 0x808080 }),
+            path: new THREE.MeshLambertMaterial({ color: 0xD2B48C })
+        };
+        
+        // Create the path for enemies to follow
+        const path = createPath();
+        const pathPoints = path.getPoints(100);
+        
+        for (let x = 0; x < gridSize; x++) {
+            grid[x] = [];
+            for (let z = 0; z < gridSize; z++) {
+                const worldX = (x - gridSize / 2) * cellSize;
+                const worldZ = (z - gridSize / 2) * cellSize;
+                
+                // Check if this cell is part of the path
+                const isPath = isPointNearPath(worldX, worldZ, pathPoints, cellSize * 0.75);
+                
+                // Determine terrain type
+                let terrainType;
+                if (isPath) {
+                    terrainType = 'path';
+                } else {
+                    // Random terrain for non-path cells
+                    const terrainRandom = Math.random();
+                    if (terrainRandom < 0.1) {
+                        terrainType = 'water';
+                    } else if (terrainRandom < 0.2) {
+                        terrainType = 'rock';
+                    } else {
+                        terrainType = 'grass';
+                    }
+                }
+                
+                const terrain = new THREE.Mesh(terrainGeometry, terrainMaterials[terrainType]);
+                terrain.position.set(worldX, 0, worldZ);
+                terrain.receiveShadow = true;
+                scene.add(terrain);
+                
+                grid[x][z] = {
+                    type: terrainType,
+                    mesh: terrain,
+                    tower: null,
+                    worldX,
+                    worldZ
+                };
+            }
+        }
+        
+        // Create a visual representation of the path
+        visualizePath(path);
+        
+        // Raycaster for mouse interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        // Event listeners
+        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('click', onMouseClick);
+        
+        document.querySelectorAll('.tower-button').forEach(button => {
+            button.addEventListener('click', selectTower);
+        });
+        
+        document.getElementById('start-wave').addEventListener('click', startWave);
+        
+        // Animation loop
+        let lastTime = 0;
+        function animate(time) {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = (time - lastTime) / 1000; // Convert to seconds
+            lastTime = time;
+            
+            updateGame(deltaTime);
+            updateDayNightCycle(deltaTime); // Update day-night cycle
+            controls.update();
+            composer.render(); // Use composer instead of renderer
+        }
+        
+        // Start the animation loop
+        animate(0);
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Handle mouse movement for grid highlighting
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            highlightGrid();
+        }
+        
+        // Handle mouse clicks for tower placement
+        function onMouseClick() {
+            if (!gameState.selectedTower) return;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const cell = getCellFromPosition(intersect.object.position.x, intersect.object.position.z);
+                
+                if (cell && canPlaceTower(cell)) {
+                    placeTower(cell, gameState.selectedTower);
+                }
+            }
+        }
+        
+        // Handle tower selection
+        function selectTower(event) {
+            const towerType = event.currentTarget.dataset.type;
+            const towerCost = parseInt(event.currentTarget.dataset.cost);
+            
+            // Deselect all buttons
+            document.querySelectorAll('.tower-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            if (gameState.selectedTower === towerType) {
+                // Deselect if clicking the same tower
+                gameState.selectedTower = null;
+            } else {
+                // Select the new tower
+                gameState.selectedTower = towerType;
+                event.currentTarget.classList.add('selected');
+            }
+        }
+        
+        // Start a new wave
+        function startWave() {
+            if (gameState.waveInProgress || gameState.currentWave >= waves.length) return;
+            
+            gameState.currentWave++;
+            document.getElementById('wave').textContent = gameState.currentWave;
+            gameState.waveInProgress = true;
+            
+            const wave = waves[gameState.currentWave - 1];
+            let enemyIndex = 0;
+            
+            // Spawn enemies at intervals
+            const spawnInterval = setInterval(() => {
+                if (enemyIndex >= wave.length) {
+                    clearInterval(spawnInterval);
+                    return;
+                }
+                
+                spawnEnemy(wave[enemyIndex]);
+                enemyIndex++;
+                
+                if (enemyIndex >= wave.length) {
+                    clearInterval(spawnInterval);
+                }
+            }, 1000); // Spawn an enemy every second
+        }
+        
+        // Update game state
+        function updateGame(deltaTime) {
+            updateTowers(deltaTime);
+            updateEnemies(deltaTime);
+            updateProjectiles(deltaTime);
+            checkWaveComplete();
+        }
+        
+        // Update towers (fire at enemies)
+        function updateTowers(deltaTime) {
+            for (const tower of gameState.towers) {
+                tower.cooldown -= deltaTime;
+                
+                if (tower.cooldown <= 0) {
+                    const target = findTarget(tower);
+                    
+                    if (target) {
+                        fireTower(tower, target);
+                        tower.cooldown = tower.fireRate;
+                    }
+                }
+            }
+        }
+        
+        // Update enemies (move along path)
+        function updateEnemies(deltaTime) {
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = gameState.enemies[i];
+                
+                // Move enemy along path
+                enemy.pathPosition += enemy.speed * deltaTime / 20; // Adjust for path length
+                
+                if (enemy.pathPosition >= 1) {
+                    // Enemy reached the end
+                    takeDamage(enemy.damage);
+                    removeEnemy(i);
+                    continue;
+                }
+                
+                // Update position
+                const position = path.getPointAt(enemy.pathPosition);
+                enemy.mesh.position.set(position.x, enemy.height, position.y);
+                
+                // Rotate enemy to face direction of movement
+                if (enemy.pathPosition < 0.99) {
+                    const ahead = path.getPointAt(Math.min(1, enemy.pathPosition + 0.01));
+                    const direction = new THREE.Vector2().subVectors(ahead, position).normalize();
+                    const angle = Math.atan2(direction.y, direction.x);
+                    enemy.mesh.rotation.y = -angle + Math.PI / 2;
+                }
+                
+                // Update health bar position
+                updateHealthBar(enemy);
+            }
+        }
+        
+        // Update projectiles
+        function updateProjectiles(deltaTime) {
+            for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                const projectile = gameState.projectiles[i];
+                
+                if (projectile.type === 'laser') {
+                    // Laser is instant hit, so we remove it quickly
+                    projectile.lifetime -= deltaTime;
+                    
+                    if (projectile.lifetime <= 0) {
+                        scene.remove(projectile.mesh);
+                        scene.remove(projectile.light); // Remove the light
+                        gameState.projectiles.splice(i, 1);
+                    }
+                } else {
+                    // Move other projectiles
+                    const direction = projectile.direction.clone().normalize();
+                    projectile.mesh.position.add(direction.multiplyScalar(projectile.speed * deltaTime));
+                    
+                    // Check if projectile hit target or went too far
+                    if (projectile.target.mesh.parent === null) {
+                        // Target is already destroyed
+                        scene.remove(projectile.mesh);
+                        gameState.projectiles.splice(i, 1);
+                    } else {
+                        const distance = projectile.mesh.position.distanceTo(projectile.target.mesh.position);
+                        
+                        if (distance < 0.5) {
+                            // Hit the target
+                            if (projectile.type === 'cannon') {
+                                // Splash damage
+                                dealSplashDamage(projectile.target.mesh.position, projectile.splashRadius, projectile.damage);
+                            } else {
+                                // Direct damage
+                                damageEnemy(projectile.target, projectile.damage);
+                            }
+                            
+                            scene.remove(projectile.mesh);
+                            gameState.projectiles.splice(i, 1);
+                        } else if (distance > 30) {
+                            // Projectile went too far
+                            scene.remove(projectile.mesh);
+                            gameState.projectiles.splice(i, 1);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check if the current wave is complete
+        function checkWaveComplete() {
+            if (gameState.waveInProgress && gameState.enemies.length === 0) {
+                gameState.waveInProgress = false;
+                
+                // Check if game is complete
+                if (gameState.currentWave >= waves.length) {
+                    alert('Congratulations! You completed all waves!');
+                }
+            }
+        }
+        
+        // Highlight grid cell under mouse
+        function highlightGrid() {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            
+            // Reset all cell highlighting
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    const cell = grid[x][z];
+                    if (cell.type !== 'path') {
+                        cell.mesh.material.emissive.setHex(0x000000);
+                    }
+                }
+            }
+            
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const cell = getCellFromPosition(intersect.object.position.x, intersect.object.position.z);
+                
+                if (cell && gameState.selectedTower && canPlaceTower(cell)) {
+                    cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight
+                } else if (cell && (!canPlaceTower(cell) || !gameState.selectedTower)) {
+                    cell.mesh.material.emissive.setHex(0xff0000); // Red highlight
+                }
+            }
+        }
+        
+        // Create enemy path
+        function createPath() {
+            const pathCurve = new THREE.SplineCurve([
+                new THREE.Vector2(-gridSize / 2 * cellSize, 0),
+                new THREE.Vector2(-gridSize / 4 * cellSize, gridSize / 4 * cellSize),
+                new THREE.Vector2(0, gridSize / 3 * cellSize),
+                new THREE.Vector2(gridSize / 4 * cellSize, 0),
+                new THREE.Vector2(0, -gridSize / 4 * cellSize),
+                new THREE.Vector2(-gridSize / 3 * cellSize, -gridSize / 3 * cellSize),
+                new THREE.Vector2(gridSize / 2 * cellSize, -gridSize / 2 * cellSize)
+            ]);
+            
+            return pathCurve;
+        }
+        
+        // Visualize the path
+        function visualizePath(path) {
+            const points = path.getPoints(100);
+            const geometry = new THREE.BufferGeometry().setFromPoints(
+                points.map(p => new THREE.Vector3(p.x, 0.21, p.y))
+            );
+            const material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 3 });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+        }
+        
+        // Check if a point is near the path
+        function isPointNearPath(x, z, pathPoints, threshold) {
+            for (const point of pathPoints) {
+                const distance = Math.sqrt((x - point.x) ** 2 + (z - point.y) ** 2);
+                if (distance < threshold) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Get grid cell from world position
+        function getCellFromPosition(x, z) {
+            const gridX = Math.floor(x / cellSize + gridSize / 2);
+            const gridZ = Math.floor(z / cellSize + gridSize / 2);
+            
+            if (gridX >= 0 && gridX < gridSize && gridZ >= 0 && gridZ < gridSize) {
+                return grid[gridX][gridZ];
+            }
+            return null;
+        }
+        
+        // Check if a tower can be placed on a cell
+        function canPlaceTower(cell) {
+            if (!gameState.selectedTower) return false;
+            if (cell.type === 'path' || cell.type === 'rock') return false;
+            if (cell.type === 'water') return false; // Could implement special towers for water later
+            if (cell.tower) return false;
+            
+            const towerCost = towerTypes[gameState.selectedTower].cost;
+            return gameState.gold >= towerCost;
+        }
+        
+        // Place a tower on a cell
+        function placeTower(cell, towerType) {
+            const towerInfo = towerTypes[towerType];
+            
+            // Check if player has enough gold
+            if (gameState.gold < towerInfo.cost) return;
+            
+            // Deduct gold
+            gameState.gold -= towerInfo.cost;
+            document.getElementById('gold').textContent = gameState.gold;
+            
+            // Create tower mesh
+            const towerGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 8);
+            const towerMaterial = new THREE.MeshPhongMaterial({ color: towerInfo.color });
+            const towerMesh = new THREE.Mesh(towerGeometry, towerMaterial);
+            towerMesh.position.set(cell.worldX, 0.6, cell.worldZ);
+            towerMesh.castShadow = true;
+            scene.add(towerMesh);
+            
+            // Create tower turret
+            const turretGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
+            const turretMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const turretMesh = new THREE.Mesh(turretGeometry, turretMaterial);
+            turretMesh.position.set(0, 0.5, 0.2);
+            towerMesh.add(turretMesh);
+            
+            // Create range indicator (hidden by default)
+            const rangeGeometry = new THREE.RingGeometry(0.1, towerInfo.range, 32);
+            const rangeMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffff00, 
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.3,
+                visible: false
+            });
+            const rangeMesh = new THREE.Mesh(rangeGeometry, rangeMaterial);
+            rangeMesh.rotation.x = -Math.PI / 2; // Flat on ground
+            rangeMesh.position.y = 0.1;
+            towerMesh.add(rangeMesh);
+            
+            // Store tower data
+            const tower = {
+                type: towerType,
+                mesh: towerMesh,
+                turret: turretMesh,
+                range: towerInfo.range,
+                rangeMesh: rangeMesh,
+                damage: towerInfo.damage,
+                fireRate: towerInfo.fireRate,
+                cooldown: 0,
+                upgradeLevel: 0,
+                cell: cell,
+                splashRadius: towerInfo.splashRadius
+            };
+            
+            gameState.towers.push(tower);
+            cell.tower = tower;
+        }
+        
+        // Find a target for a tower
+        function findTarget(tower) {
+            let closest = null;
+            let closestDistance = tower.range + 1;
+            
+            for (const enemy of gameState.enemies) {
+                const distance = enemy.mesh.position.distanceTo(tower.mesh.position);
+                
+                if (distance <= tower.range && distance < closestDistance) {
+                    closest = enemy;
+                    closestDistance = distance;
+                }
+            }
+            
+            return closest;
+        }
+        
+        // Fire tower at target
+        function fireTower(tower, target) {
+            // Rotate turret to face target
+            const direction = new THREE.Vector3()
+                .subVectors(target.mesh.position, tower.mesh.position)
+                .normalize();
+            
+            tower.turret.lookAt(target.mesh.position);
+            
+            if (tower.type === 'laser') {
+                // Create laser beam
+                const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
+                const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                const laserMesh = new THREE.Mesh(laserGeometry, laserMaterial);
+                
+                // Position and orient the laser
+                const distance = tower.mesh.position.distanceTo(target.mesh.position);
+                laserMesh.scale.set(1, distance, 1);
+                laserMesh.position.copy(tower.mesh.position)
+                    .add(direction.clone().multiplyScalar(distance / 2));
+                laserMesh.lookAt(target.mesh.position);
+                laserMesh.rotateX(Math.PI / 2);
+                
+                // Add a point light to the laser
+                const laserLight = new THREE.PointLight(0xff0000, 2, distance);
+                laserLight.position.copy(laserMesh.position);
+                scene.add(laserLight);
+                
+                scene.add(laserMesh);
+                
+                // Add to projectiles with short lifetime
+                gameState.projectiles.push({
+                    type: 'laser',
+                    mesh: laserMesh,
+                    light: laserLight,
+                    lifetime: 0.1,
+                    target: target
+                });
+                
+                // Apply damage instantly
+                damageEnemy(target, tower.damage);
+            } else if (tower.type === 'cannon') {
+                // Create cannonball
+                const ballGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+                const ballMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                const ballMesh = new THREE.Mesh(ballGeometry, ballMaterial);
+                ballMesh.position.copy(tower.mesh.position);
+                ballMesh.position.y += 0.5;
+                
+                scene.add(ballMesh);
+                
+                gameState.projectiles.push({
+                    type: 'cannon',
+                    mesh: ballMesh,
+                    direction: direction.clone().setY(0.5).normalize(), // Arc trajectory
+                    speed: 10,
+                    target: target,
+                    damage: tower.damage,
+                    splashRadius: tower.splashRadius
+                });
+            } else if (tower.type === 'sniper') {
+                // Create sniper bullet
+                const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+                const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
+                bulletMesh.position.copy(tower.mesh.position);
+                bulletMesh.position.y += 0.5;
+                
+                scene.add(bulletMesh);
+                
+                gameState.projectiles.push({
+                    type: 'sniper',
+                    mesh: bulletMesh,
+                    direction: direction.clone().setY(0.1).normalize(),
+                    speed: 30,
+                    target: target,
+                    damage: tower.damage
+                });
+            }
+        }
+        
+        // Deal splash damage around a point
+        function dealSplashDamage(position, radius, damage) {
+            for (const enemy of gameState.enemies) {
+                const distance = enemy.mesh.position.distanceTo(position);
+                
+                if (distance <= radius) {
+                    // Calculate damage falloff based on distance
+                    const falloff = 1 - (distance / radius);
+                    const actualDamage = Math.floor(damage * falloff);
+                    damageEnemy(enemy, actualDamage);
+                }
+            }
+        }
+        
+        // Spawn a new enemy
+        function spawnEnemy(type) {
+            const enemyInfo = enemyTypes[type];
+            let geometry;
+            
+            // Create appropriate geometry based on enemy type
+            if (type === 'square') {
+                geometry = new THREE.BoxGeometry(enemyInfo.size, enemyInfo.size, enemyInfo.size);
+            } else if (type === 'circle') {
+                geometry = new THREE.SphereGeometry(enemyInfo.size / 2, 16, 16);
+            } else if (type === 'triangle') {
+                geometry = new THREE.ConeGeometry(enemyInfo.size / 2, enemyInfo.size, 3);
+            } else if (type === 'pentagon') {
+                geometry = new THREE.CylinderGeometry(enemyInfo.size / 2, enemyInfo.size / 2, enemyInfo.size / 2, 5);
+            }
+            
+            const material = new THREE.MeshPhongMaterial({ color: enemyInfo.color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            
+            // Position at start of path
+            const startPoint = path.getPointAt(0);
+            mesh.position.set(startPoint.x, enemyInfo.size / 2, startPoint.y);
+            scene.add(mesh);
+            
+            // Create health bar
+            const healthBarWidth = enemyInfo.size * 1.2;
+            const healthBarHeight = 0.1;
+            
+            const healthBarBg = new THREE.Mesh(
+                new THREE.PlaneGeometry(healthBarWidth, healthBarHeight),
+                new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide })
+            );
+            healthBarBg.rotation.x = -Math.PI / 2; // Make it face the camera
+            
+            const healthBarFg = new THREE.Mesh(
+                new THREE.PlaneGeometry(healthBarWidth, healthBarHeight),
+                new THREE.MeshBasicMaterial({ color: getHealthBarColor(type), side: THREE.DoubleSide })
+            );
+            healthBarFg.rotation.x = -Math.PI / 2;
+            healthBarFg.position.z = 0.01; // Slightly in front of background
+            
+            healthBarBg.position.y = enemyInfo.size + 0.2;
+            healthBarFg.position.y = enemyInfo.size + 0.2;
+            
+            mesh.add(healthBarBg);
+            mesh.add(healthBarFg);
+            
+            // Store enemy data
+            const enemy = {
+                type: type,
+                mesh: mesh,
+                health: enemyInfo.health,
+                maxHealth: enemyInfo.health,
+                speed: enemyInfo.speed,
+                reward: enemyInfo.reward,
+                damage: enemyInfo.damage,
+                pathPosition: 0,
+                height: enemyInfo.size / 2,
+                healthBar: {
+                    background: healthBarBg,
+                    foreground: healthBarFg,
+                    width: healthBarWidth
+                }
+            };
+            
+            gameState.enemies.push(enemy);
+        }
+        
+        // Function to get health bar color based on enemy type
+        function getHealthBarColor(type) {
+            switch(type) {
+                case 'square': return 0x00ff00; // Green
+                case 'circle': return 0x00ffff; // Cyan
+                case 'triangle': return 0xffff00; // Yellow
+                case 'pentagon': return 0xff0000; // Red
+                default: return 0xffffff; // White
+            }
+        }
+        
+        // Update health bar position and scale
+        function updateHealthBar(enemy) {
+            // Update health bar position to follow enemy
+            const healthPercentage = enemy.health / enemy.maxHealth;
+            
+            // Scale the health bar based on current health
+            enemy.healthBar.foreground.scale.x = healthPercentage;
+            
+            // Position the health bar to align left
+            const offset = enemy.healthBar.width * (1 - healthPercentage) / 2;
+            enemy.healthBar.foreground.position.x = -offset;
+            
+            // Make health bar face the camera
+            enemy.healthBar.background.lookAt(camera.position);
+            enemy.healthBar.foreground.lookAt(camera.position);
+        }
+        
+        // Deal damage to an enemy
+        function damageEnemy(enemy, amount) {
+            enemy.health -= amount;
+            updateHealthBar(enemy);
+            
+            if (enemy.health <= 0) {
+                // Give player reward
+                gameState.gold += enemy.reward;
+                document.getElementById('gold').textContent = gameState.gold;
+                
+                // Create explosion effect
+                createExplosion(enemy.mesh.position, enemy.type);
+                
+                // Remove the enemy
+                const index = gameState.enemies.indexOf(enemy);
+                if (index !== -1) {
+                    removeEnemy(index);
+                }
+            }
+        }
+        
+        // Remove an enemy from the game
+        function removeEnemy(index) {
+            const enemy = gameState.enemies[index];
+            scene.remove(enemy.mesh);
+            gameState.enemies.splice(index, 1);
+        }
+        
+        // Create explosion effect when enemy is destroyed
+        function createExplosion(position, type) {
+            const particleCount = 15;
+            const particles = [];
+            const color = enemyTypes[type].color;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const material = new THREE.MeshBasicMaterial({ color: color });
+                const particle = new THREE.Mesh(geometry, material);
+                
+                // Set position to enemy position
+                particle.position.copy(position);
+                
+                // Random velocity
+                particle.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 3,
+                    Math.random() * 2,
+                    (Math.random() - 0.5) * 3
+                );
+                
+                // Random rotation
+                particle.rotation.set(
+                    Math.random() * Math.PI * 2,
+                    Math.random() * Math.PI * 2,
+                    Math.random() * Math.PI * 2
+                );
+                
+                particle.lifetime = 1 + Math.random(); // 1-2 seconds
+                
+                scene.add(particle);
+                particles.push(particle);
+            }
+            
+            // Animate particles
+            const animateParticles = function(time) {
+                let allDead = true;
+                
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const particle = particles[i];
+                    
+                    // Move particle
+                    particle.position.add(particle.velocity);
+                    
+                    // Apply gravity
+                    particle.velocity.y -= 0.1;
+                    
+                    // Rotate particle
+                    particle.rotation.x += 0.1;
+                    particle.rotation.y += 0.1;
+                    
+                    // Decrease lifetime
+                    particle.lifetime -= 0.016; // Approximately one frame at 60fps
+                    
+                    // Fade out
+                    if (particle.lifetime < 0.5) {
+                        particle.material.opacity = particle.lifetime / 0.5;
+                        particle.material.transparent = true;
+                    }
+                    
+                    if (particle.lifetime <= 0) {
+                        scene.remove(particle);
+                        particles.splice(i, 1);
+                    } else {
+                        allDead = false;
+                    }
+                }
+                
+                if (!allDead) {
+                    requestAnimationFrame(animateParticles);
+                }
+            };
+            
+            requestAnimationFrame(animateParticles);
+        }
+        
+        // Take damage when enemy reaches the end
+        function takeDamage(amount) {
+            gameState.lives -= amount;
+            document.getElementById('lives').textContent = gameState.lives;
+            
+            // Check if game over
+            if (gameState.lives <= 0) {
+                alert('Game Over! You survived ' + gameState.currentWave + ' waves.');
+                resetGame();
+            }
+        }
+        
+        // Reset game state
+        function resetGame() {
+            // Reset game state
+            gameState.gold = 100;
+            gameState.lives = 20;
+            gameState.currentWave = 0;
+            gameState.waveInProgress = false;
+            
+            // Update UI
+            document.getElementById('gold').textContent = gameState.gold;
+            document.getElementById('lives').textContent = gameState.lives;
+            document.getElementById('wave').textContent = gameState.currentWave;
+            
+            // Clear all enemies
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                removeEnemy(i);
+            }
+            
+            // Clear all projectiles
+            for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                scene.remove(gameState.projectiles[i].mesh);
+                if (gameState.projectiles[i].light) {
+                    scene.remove(gameState.projectiles[i].light);
+                }
+            }
+            gameState.projectiles = [];
+            
+            // Clear all towers
+            for (let i = gameState.towers.length - 1; i >= 0; i--) {
+                const tower = gameState.towers[i];
+                scene.remove(tower.mesh);
+                tower.cell.tower = null;
+            }
+            gameState.towers = [];
+            
+            // Deselect tower
+            gameState.selectedTower = null;
+            document.querySelectorAll('.tower-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+        
+        // Generate wave definitions for all waves
+        function generateWaves() {
+            const waves = [];
+            
+            // Wave 1-5: Mostly squares
+            for (let i = 0; i < 5; i++) {
+                const wave = [];
+                const count = 5 + i * 2; // 5, 7, 9, 11, 13 enemies
+                
+                for (let j = 0; j < count; j++) {
+                    wave.push('square');
+                }
+                
+                // Add a few circles in later waves
+                if (i >= 2) {
+                    for (let j = 0; j < i; j++) {
+                        wave.push('circle');
+                    }
+                }
+                
+                waves.push(wave);
+            }
+            
+            // Wave 6-15: Mix of squares, circles, and triangles
+            for (let i = 0; i < 10; i++) {
+                const wave = [];
+                const squareCount = 5 + Math.floor(i / 2); // 5-9 squares
+                const circleCount = 5 + Math.floor(i / 2); // 5-9 circles
+                const triangleCount = Math.floor(i / 2); // 0-4 triangles
+                
+                for (let j = 0; j < squareCount; j++) {
+                    wave.push('square');
+                }
+                
+                for (let j = 0; j < circleCount; j++) {
+                    wave.push('circle');
+                }
+                
+                for (let j = 0; j < triangleCount; j++) {
+                    wave.push('triangle');
+                }
+                
+                // Shuffle the wave
+                for (let j = wave.length - 1; j > 0; j--) {
+                    const k = Math.floor(Math.random() * (j + 1));
+                    [wave[j], wave[k]] = [wave[k], wave[j]];
+                }
+                
+                waves.push(wave);
+            }
+            
+            // Wave 16-25: All enemy types including pentagons
+            for (let i = 0; i < 10; i++) {
+                const wave = [];
+                const squareCount = 10 + i; // 10-19 squares
+                const circleCount = 10 + i; // 10-19 circles
+                const triangleCount = 5 + i; // 5-14 triangles
+                const pentagonCount = 1 + Math.floor(i / 2); // 1-5 pentagons
+                
+                for (let j = 0; j < squareCount; j++) {
+                    wave.push('square');
+                }
+                
+                for (let j = 0; j < circleCount; j++) {
+                    wave.push('circle');
+                }
+                
+                for (let j = 0; j < triangleCount; j++) {
+                    wave.push('triangle');
+                }
+                
+                for (let j = 0; j < pentagonCount; j++) {
+                    wave.push('pentagon');
+                }
+                
+                // Shuffle the wave
+                for (let j = wave.length - 1; j > 0; j--) {
+                    const k = Math.floor(Math.random() * (j + 1));
+                    [wave[j], wave[k]] = [wave[k], wave[j]];
+                }
+                
+                waves.push(wave);
+            }
+            
+            return waves;
+        }
+        
+        // Tower upgrade system
+        function upgradeTower(tower) {
+            const towerType = tower.type;
+            const nextLevel = tower.upgradeLevel + 1;
+            
+            // Check if upgrade is available
+            if (nextLevel >= towerTypes[towerType].upgrades.length) {
+                console.log('Max upgrade level reached');
+                return;
+            }
+            
+            const upgradeCost = towerTypes[towerType].upgrades[nextLevel - 1].cost;
+            
+            // Check if player has enough gold
+            if (gameState.gold < upgradeCost) {
+                console.log('Not enough gold for upgrade');
+                return;
+            }
+            
+            // Deduct gold
+            gameState.gold -= upgradeCost;
+            document.getElementById('gold').textContent = gameState.gold;
+            
+            // Apply upgrade
+            const upgradeInfo = towerTypes[towerType].upgrades[nextLevel - 1];
+            
+            tower.damage = upgradeInfo.damage;
+            tower.range = upgradeInfo.range;
+            tower.fireRate = upgradeInfo.fireRate;
+            if (upgradeInfo.splashRadius) tower.splashRadius = upgradeInfo.splashRadius;
+            
+            // Update range indicator
+            tower.rangeMesh.geometry.dispose();
+            tower.rangeMesh.geometry = new THREE.RingGeometry(0.1, tower.range, 32);
+            
+            // Visual upgrade
+            tower.mesh.material.color.setHex(getLevelColor(nextLevel));
+            
+            // Update tower level
+            tower.upgradeLevel = nextLevel;
+            
+            // Display upgrade notification
+            console.log(`Tower upgraded to level ${nextLevel + 1}`);
+        }
+        
+        // Get color for tower level
+        function getLevelColor(level) {
+            switch(level) {
+                case 1: return 0xffaa00; // Bronze
+                case 2: return 0xcccccc; // Silver
+                case 3: return 0xffdd00; // Gold
+                default: return 0xffffff; // White
+            }
+        }
+        
+        // Add tower selection and upgrade UI
+        function setupTowerUI() {
+            // Create tower upgrade button
+            const upgradeButton = document.createElement('button');
+            upgradeButton.id = 'upgrade-tower';
+            upgradeButton.textContent = 'Upgrade Selected Tower';
+            upgradeButton.style.position = 'absolute';
+            upgradeButton.style.bottom = '60px';
+            upgradeButton.style.right = '10px';
+            upgradeButton.style.padding = '10px 20px';
+            upgradeButton.style.backgroundColor = 'rgba(255, 200, 0, 0.7)';
+            upgradeButton.style.color = 'white';
+            upgradeButton.style.border = '2px solid white';
+            upgradeButton.style.borderRadius = '5px';
+            upgradeButton.style.cursor = 'pointer';
+            upgradeButton.style.display = 'none'; // Hidden by default
+            
+            upgradeButton.addEventListener('click', () => {
+                const selectedTower = gameState.selectedTower;
+                if (selectedTower && typeof selectedTower === 'object') {
+                    upgradeTower(selectedTower);
+                }
+            });
+            
+            document.body.appendChild(upgradeButton);
+            
+            // Add click listener to select placed towers
+            window.addEventListener('click', (event) => {
+                if (gameState.selectedTower && typeof gameState.selectedTower === 'string') {
+                    // We're in tower placement mode, don't select towers
+                    return;
+                }
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(scene.children);
+                
+                // Deselect tower selection buttons
+                document.querySelectorAll('.tower-button').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                
+                // Hide range indicators for all towers
+                for (const tower of gameState.towers) {
+                    tower.rangeMesh.material.visible = false;
+                }
+                
+                // Hide upgrade button
+                upgradeButton.style.display = 'none';
+                
+                if (intersects.length > 0) {
+                    // Check if clicked on a tower
+                    for (const tower of gameState.towers) {
+                        if (intersects[0].object === tower.mesh || tower.mesh.children.includes(intersects[0].object)) {
+                            // Select this tower
+                            gameState.selectedTower = tower;
+                            
+                            // Show range indicator
+                            tower.rangeMesh.material.visible = true;
+                            
+                            // Show upgrade button if not max level
+                            if (tower.upgradeLevel < towerTypes[tower.type].upgrades.length) {
+                                upgradeButton.textContent = `Upgrade Tower ($${towerTypes[tower.type].upgrades[tower.upgradeLevel].cost})`;
+                                upgradeButton.style.display = 'block';
+                            }
+                            
+                            return;
+                        }
+                    }
+                    
+                    // Clicked elsewhere, deselect tower
+                    gameState.selectedTower = null;
+                }
+            });
+        }
+        
+        // Initialize fast forward button
+        function setupFastForwardButton() {
+            const ffButton = document.createElement('button');
+            ffButton.id = 'fast-forward';
+            ffButton.textContent = '>> Fast Forward';
+            ffButton.style.position = 'absolute';
+            ffButton.style.bottom = '10px';
+            ffButton.style.right = '150px';
+            ffButton.style.padding = '10px 20px';
+            ffButton.style.backgroundColor = 'rgba(0, 0, 100, 0.7)';
+            ffButton.style.color = 'white';
+            ffButton.style.border = '2px solid white';
+            ffButton.style.borderRadius = '5px';
+            ffButton.style.cursor = 'pointer';
+            
+            let fastMode = false;
+            ffButton.addEventListener('click', () => {
+                fastMode = !fastMode;
+                
+                if (fastMode) {
+                    // Double game speed
+                    ffButton.textContent = '> Normal Speed';
+                    ffButton.style.backgroundColor = 'rgba(100, 0, 0, 0.7)';
+                    
+                    // Adjust enemy speeds
+                    for (const enemy of gameState.enemies) {
+                        enemy.speed *= 2;
+                    }
+                    
+                    // Adjust tower fire rates
+                    for (const tower of gameState.towers) {
+                        tower.fireRate /= 2;
+                    }
+                } else {
+                    // Normal game speed
+                    ffButton.textContent = '>> Fast Forward';
+                    ffButton.style.backgroundColor = 'rgba(0, 0, 100, 0.7)';
+                    
+                    // Reset enemy speeds
+                    for (const enemy of gameState.enemies) {
+                        enemy.speed /= 2;
+                    }
+                    
+                    // Reset tower fire rates
+                    for (const tower of gameState.towers) {
+                        tower.fireRate *= 2;
+                    }
+                }
+            });
+            
+            document.body.appendChild(ffButton);
+        }
+        
+        // Initialize the game UI
+        setupTowerUI();
+        setupFastForwardButton();
+
+        // Day-Night Cycle
+        let timeOfDay = 0; // 0 = dawn, 1 = noon, 2 = dusk, 3 = night
+        function updateDayNightCycle(deltaTime) {
+            timeOfDay += deltaTime * 0.01; // Adjust speed as needed
+            if (timeOfDay > 4) timeOfDay = 0;
+
+            const angle = (timeOfDay / 4) * Math.PI * 2;
+            sunLight.position.x = Math.cos(angle) * 20;
+            sunLight.position.y = Math.sin(angle) * 20;
+
+            // Adjust light intensity and color based on time of day
+            if (timeOfDay < 1 || timeOfDay > 3) {
+                sunLight.intensity = 0.5; // Dawn or dusk
+                sunLight.color.setHSL(0.1, 0.8, 0.5); // Warm orange
+            } else if (timeOfDay < 2) {
+                sunLight.intensity = 1; // Noon
+                sunLight.color.setHSL(0.1, 0.8, 1); // Bright white
+            } else {
+                sunLight.intensity = 0.2; // Night
+                sunLight.color.setHSL(0.6, 0.8, 0.2); // Cool blue
+            }
+        }
+    </script>
+</body>
+</html>
