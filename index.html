@@ -186,7 +186,7 @@
                 damage: 4,
                 range: 3,
                 fireRate: 1.2,
-                splashRadius: 1.5,
+                splashRadius: 15,
                 color: 0x0000ff,
                 upgradeLevel: 0,
                 upgrades: [
@@ -542,7 +542,7 @@
                     } else {
                         const distance = projectile.mesh.position.distanceTo(projectile.target.mesh.position);
                         
-                        if (distance < 0.8) {
+                        if (distance < 10) {
                             // Hit the target
                             if (projectile.type === 'cannon') {
                                 // Splash damage
@@ -653,15 +653,24 @@
         
         // Check if a tower can be placed on a cell
         function canPlaceTower(cell) {
-            if (!gameState.selectedTower) return false;
-            if (cell.type === 'path' || cell.type === 'rock') return false;
-            if (cell.type === 'water') return false; // Could implement special towers for water later
-            if (cell.tower) return false;
-            
-            const towerCost = towerTypes[gameState.selectedTower].cost;
-            return gameState.gold >= towerCost;
+    if (!gameState.selectedTower) return false;
+    if (cell.type === 'path' || cell.type === 'rock' || cell.type === 'water') return false;
+    if (cell.tower) return false; // Already occupied
+
+    // Remove unnecessary range restriction
+    return gameState.gold >= towerTypes[gameState.selectedTower].cost;
+}
+
+  function isTowerTooClose(newPosition, minDistance = 0.5) { // Reduce distance if needed
+    for (const tower of gameState.towers) {
+        const distance = tower.mesh.position.distanceTo(newPosition);
+        if (distance < minDistance) {
+            return true;
         }
-        
+    }
+    return false;
+}
+      
         // Place a tower on a cell
         function placeTower(cell, towerType) {
             const towerInfo = towerTypes[towerType];
