@@ -542,7 +542,7 @@
                     } else {
                         const distance = projectile.mesh.position.distanceTo(projectile.target.mesh.position);
                         
-                        if (distance < 0.5) {
+                        if (distance < 0.8) {
                             // Hit the target
                             if (projectile.type === 'cannon') {
                                 // Splash damage
@@ -787,7 +787,7 @@
                     type: 'cannon',
                     mesh: ballMesh,
                     direction: direction.clone().setY(0.5).normalize(), // Arc trajectory
-                    speed: 10,
+                    speed: 50,
                     target: target,
                     damage: tower.damage,
                     splashRadius: tower.splashRadius
@@ -806,7 +806,7 @@
                     type: 'sniper',
                     mesh: bulletMesh,
                     direction: direction.clone().setY(0.1).normalize(),
-                    speed: 30,
+                    speed: 50,
                     target: target,
                     damage: tower.damage
                 });
