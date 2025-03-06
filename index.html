@@ -22,6 +22,7 @@
             padding: 10px;
             border-radius: 5px;
             user-select: none;
+            display: none; /* Initially hidden */
         }
         #tower-selection {
             position: absolute;
@@ -29,6 +30,7 @@
             left: 10px;
             display: flex;
             gap: 10px;
+            display: none; /* Initially hidden */
         }
         .tower-button {
             background-color: rgba(0, 0, 0, 0.7);
@@ -55,13 +57,85 @@
             border: 2px solid white;
             border-radius: 5px;
             cursor: pointer;
+            display: none; /* Initially hidden */
         }
         #start-wave:hover {
+            background-color: rgba(0, 150, 0, 0.7);
+        }
+        #main-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            user-select: none;
+        }
+        #main-menu button {
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        #main-menu button:hover {
+            background-color: rgba(0, 150, 0, 0.7);
+        }
+        #instructions {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            user-select: none;
+            text-align: left;
+        }
+        #instructions button {
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        #instructions button:hover {
             background-color: rgba(0, 150, 0, 0.7);
         }
     </style>
 </head>
 <body>
+    <!-- Main Menu -->
+    <div id="main-menu">
+        <h1>Pixel Tower Defense</h1>
+        <button id="start-game">Start Game</button>
+        <button id="show-instructions">Instructions</button>
+        <button id="exit-game">Exit</button>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions">
+        <h2>Instructions</h2>
+        <p>Welcome to Pixel Tower Defense!</p>
+        <p>1. Place towers on the grid to defend against incoming enemies.</p>
+        <p>2. Towers have different abilities and costs.</p>
+        <p>3. Enemies will follow a path, and if they reach the end, you lose lives.</p>
+        <p>4. Survive all waves to win the game!</p>
+        <button id="back-to-menu">Back to Menu</button>
+    </div>
+
+    <!-- Game UI -->
     <div id="ui">
         <div>Gold: <span id="gold">100</span></div>
         <div>Lives: <span id="lives">20</span></div>
@@ -74,12 +148,10 @@
     </div>
     <button id="start-wave">Start Wave</button>
 
-    <!-- Three.js and Post-Processing Scripts -->
+    <!-- Chargement de Three.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
+    <!-- Chargement de OrbitControls.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
     <script>
         // Game state
@@ -210,29 +282,7 @@
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
         scene.add(directionalLight);
-
-        // Day-Night Cycle Light
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-        sunLight.position.set(10, 20, 10);
-        scene.add(sunLight);
-
-        // Post-Processing Setup
-        let composer;
-        function setupPostProcessing() {
-            composer = new THREE.EffectComposer(renderer);
-            const renderPass = new THREE.RenderPass(scene, camera);
-            composer.addPass(renderPass);
-
-            const bloomPass = new THREE.UnrealBloomPass(
-                new THREE.Vector2(window.innerWidth, window.innerHeight),
-                1.5, // Strength
-                0.4, // Radius
-                0.85 // Threshold
-            );
-            composer.addPass(bloomPass);
-        }
-        setupPostProcessing();
-
+        
         // Setup game grid
         const gridSize = 20;
         const cellSize = 1;
@@ -309,6 +359,12 @@
         
         document.getElementById('start-wave').addEventListener('click', startWave);
         
+        // Main Menu Event Listeners
+        document.getElementById('start-game').addEventListener('click', startGame);
+        document.getElementById('show-instructions').addEventListener('click', showInstructions);
+        document.getElementById('exit-game').addEventListener('click', exitGame);
+        document.getElementById('back-to-menu').addEventListener('click', backToMenu);
+
         // Animation loop
         let lastTime = 0;
         function animate(time) {
@@ -318,9 +374,8 @@
             lastTime = time;
             
             updateGame(deltaTime);
-            updateDayNightCycle(deltaTime); // Update day-night cycle
             controls.update();
-            composer.render(); // Use composer instead of renderer
+            renderer.render(scene, camera);
         }
         
         // Start the animation loop
@@ -331,7 +386,6 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
         }
         
         // Handle mouse movement for grid highlighting
@@ -473,7 +527,6 @@
                     
                     if (projectile.lifetime <= 0) {
                         scene.remove(projectile.mesh);
-                        scene.remove(projectile.light); // Remove the light
                         gameState.projectiles.splice(i, 1);
                     }
                 } else {
@@ -708,18 +761,12 @@
                 laserMesh.lookAt(target.mesh.position);
                 laserMesh.rotateX(Math.PI / 2);
                 
-                // Add a point light to the laser
-                const laserLight = new THREE.PointLight(0xff0000, 2, distance);
-                laserLight.position.copy(laserMesh.position);
-                scene.add(laserLight);
-                
                 scene.add(laserMesh);
                 
                 // Add to projectiles with short lifetime
                 gameState.projectiles.push({
                     type: 'laser',
                     mesh: laserMesh,
-                    light: laserLight,
                     lifetime: 0.1,
                     target: target
                 });
@@ -1014,9 +1061,6 @@
             // Clear all projectiles
             for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
                 scene.remove(gameState.projectiles[i].mesh);
-                if (gameState.projectiles[i].light) {
-                    scene.remove(gameState.projectiles[i].light);
-                }
             }
             gameState.projectiles = [];
             
@@ -1309,27 +1353,39 @@
         setupTowerUI();
         setupFastForwardButton();
 
-        // Day-Night Cycle
-        let timeOfDay = 0; // 0 = dawn, 1 = noon, 2 = dusk, 3 = night
-        function updateDayNightCycle(deltaTime) {
-            timeOfDay += deltaTime * 0.01; // Adjust speed as needed
-            if (timeOfDay > 4) timeOfDay = 0;
+        // Main Menu Functions
+        function startGame() {
+            // Hide the main menu
+            document.getElementById('main-menu').style.display = 'none';
+            
+            // Show the game UI
+            document.getElementById('ui').style.display = 'block';
+            document.getElementById('tower-selection').style.display = 'flex';
+            document.getElementById('start-wave').style.display = 'block';
+            
+            // Reset the game state
+            resetGame();
+        }
 
-            const angle = (timeOfDay / 4) * Math.PI * 2;
-            sunLight.position.x = Math.cos(angle) * 20;
-            sunLight.position.y = Math.sin(angle) * 20;
+        function showInstructions() {
+            // Hide the main menu
+            document.getElementById('main-menu').style.display = 'none';
+            
+            // Show the instructions
+            document.getElementById('instructions').style.display = 'block';
+        }
 
-            // Adjust light intensity and color based on time of day
-            if (timeOfDay < 1 || timeOfDay > 3) {
-                sunLight.intensity = 0.5; // Dawn or dusk
-                sunLight.color.setHSL(0.1, 0.8, 0.5); // Warm orange
-            } else if (timeOfDay < 2) {
-                sunLight.intensity = 1; // Noon
-                sunLight.color.setHSL(0.1, 0.8, 1); // Bright white
-            } else {
-                sunLight.intensity = 0.2; // Night
-                sunLight.color.setHSL(0.6, 0.8, 0.2); // Cool blue
-            }
+        function backToMenu() {
+            // Hide the instructions
+            document.getElementById('instructions').style.display = 'none';
+            
+            // Show the main menu
+            document.getElementById('main-menu').style.display = 'block';
+        }
+
+        function exitGame() {
+            // Close the game window (or redirect to another page)
+            window.close();
         }
     </script>
 </body>
