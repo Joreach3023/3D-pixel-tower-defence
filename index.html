@@ -682,23 +682,15 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         }
         
         // Check if a tower can be placed on a cell
-        function canPlaceTower(cell) {
-            if (!gameState.selectedTower) return false;
-            if (cell.type === 'path' || cell.type === 'rock') return false;
-            if (cell.type === 'water') return false; // Could implement special towers for water later
-            if (cell.tower) return false;
-            
-            // Allow placing towers near existing ones
-            const towerCost = towerTypes[gameState.selectedTower].cost;
-            return gameState.gold >= towerCost;
-        }
-        
-        // Place a tower on a cell
-        function placeTower(cell, towerType) {
-            const towerInfo = towerTypes[towerType];
-            
-            // Check if player has enough gold
-            if (gameState.gold < towerInfo.cost) return;
+function canPlaceTower(cell) {
+    if (!gameState.selectedTower) return false; // No tower selected
+    if (cell.type === 'path' || cell.type === 'rock') return false; // Cannot place on path or rock
+    if (cell.type === 'water') return false; // Cannot place on water (unless you add water towers later)
+    if (cell.tower) return false; // Cell already has a tower
+
+    // Check if player has enough gold
+    const towerCost = towerTypes[gameState.selectedTower].cost;
+    return gameState.gold >= towerCost;
             
             // Deduct gold
             gameState.gold -= towerInfo.cost;
