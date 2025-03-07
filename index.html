@@ -2,64 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Tower Defense</title>
     <style>
-    body { 
-        margin: 0; 
-        overflow: hidden; 
-        font-family: 'Courier New', Courier, monospace;
-    }
-    canvas { display: block; }
-
-    /* Existing UI styling */
-    #ui {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        color: white;
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 10px;
-        border-radius: 5px;
-        user-select: none;
-        display: none;
-    }
-    
-    #tower-selection {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        display: flex;
-        gap: 10px;
-        display: none;
-    }
-
-    .tower-button {
-        background-color: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 10px;
-        border: 2px solid white;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .tower-button:hover {
-        background-color: rgba(50, 50, 50, 0.7);
-    }
-    .tower-button.selected {
-        border-color: yellow;
-        background-color: rgba(100, 100, 50, 0.7);
-    }
-
-    /* Mobile-friendly adjustments */
-    @media (max-width: 768px) {
-        #ui, #tower-selection, #start-wave { font-size: 14px; padding: 8px; }
-        .tower-button { padding: 8px; font-size: 12px; }
-        #start-wave { padding: 8px 16px; }
-    }
-</style>
-
-}
-
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none; /* Disable touch gestures like pinch-to-zoom */
+        }
+        canvas { 
+            display: block; 
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            user-select: none;
+            display: none; /* Initially hidden */
+            font-size: 20px; /* Larger font for mobile */
+        }
+        #tower-selection {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 10px;
+            display: none; /* Initially hidden */
+        }
+        .tower-button {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px; /* Larger padding for mobile */
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px; /* Larger font for mobile */
+        }
+        .tower-button:hover {
+            background-color: rgba(50, 50, 50, 0.7);
+        }
+        .tower-button.selected {
+            border-color: yellow;
+            background-color: rgba(100, 100, 50, 0.7);
+        }
+        #start-wave {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 15px 30px; /* Larger padding for mobile */
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none; /* Initially hidden */
+            font-size: 16px; /* Larger font for mobile */
+        }
+        #start-wave:hover {
+            background-color: rgba(0, 150, 0, 0.7);
+        }
+        #main-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            user-select: none;
+        }
+        #main-menu button {
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 15px 30px; /* Larger padding for mobile */
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px; /* Larger font for mobile */
+        }
+        #main-menu button:hover {
+            background-color: rgba(0, 150, 0, 0.7);
+        }
+        #instructions {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            user-select: none;
+            text-align: left;
+        }
+        #instructions button {
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 15px 30px; /* Larger padding for mobile */
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 16px; /* Larger font for mobile */
+        }
+        #instructions button:hover {
+            background-color: rgba(0, 150, 0, 0.7);
+        }
+    </style>
 </head>
 <body>
     <!-- Main Menu -->
@@ -116,7 +174,7 @@
         const towerTypes = {
             laser: {
                 cost: 50,
-                damage: 2,
+                damage: 1,
                 range: 5,
                 fireRate: 0.5, // seconds between shots
                 color: 0xff0000,
@@ -129,10 +187,10 @@
             },
             cannon: {
                 cost: 75,
-                damage: 4,
+                damage: 3,
                 range: 3,
                 fireRate: 1.2,
-                splashRadius: 15,
+                splashRadius: 1.5,
                 color: 0x0000ff,
                 upgradeLevel: 0,
                 upgrades: [
@@ -143,7 +201,7 @@
             },
             sniper: {
                 cost: 100,
-                damage: 10,
+                damage: 8,
                 range: 10,
                 fireRate: 2.0,
                 color: 0x00ff00,
@@ -211,14 +269,12 @@
         
         // Add orbit controls
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.screenSpacePanning = true; // Allows touch drag
-controls.minDistance = 5;
-controls.maxDistance = 30;
-controls.maxPolarAngle = Math.PI / 2;
-controls.enableZoom = true; // Enables pinch zoom
-
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+        controls.minDistance = 5;
+        controls.maxDistance = 30;
+        controls.maxPolarAngle = Math.PI / 2;
         
         // Create lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -292,38 +348,15 @@ controls.enableZoom = true; // Enables pinch zoom
         // Create a visual representation of the path
         visualizePath(path);
         
-        // Raycaster for mouse interaction
+        // Raycaster for touch interaction
         const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+        const touch = new THREE.Vector2();
         
-        // Event listeners
+        // Event listeners for touch devices
         window.addEventListener('resize', onWindowResize);
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('click', onMouseClick);
-window.addEventListener('touchstart', (event) => {
-    event.preventDefault(); // Prevents scrolling on mobile
-    onTouchStart(event);
-}, { passive: false });
-function onTouchStart(event) {
-    if (!gameState.selectedTower) return;
-
-    const touch = event.touches[0];
-    const rect = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children);
-
-    if (intersects.length > 0) {
-        const intersect = intersects[0];
-        const cell = getCellFromPosition(intersect.point.x, intersect.point.z);
-        if (cell && canPlaceTower(cell)) {
-            placeTower(cell, gameState.selectedTower);
-        }
-    }
-}
-
+        window.addEventListener('touchstart', onTouchStart);
+        window.addEventListener('touchmove', onTouchMove);
+        window.addEventListener('touchend', onTouchEnd);
         
         document.querySelectorAll('.tower-button').forEach(button => {
             button.addEventListener('click', selectTower);
@@ -360,19 +393,26 @@ function onTouchStart(event) {
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
-        // Handle mouse movement for grid highlighting
-        function onMouseMove(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        // Handle touch movement for grid highlighting
+        function onTouchMove(event) {
+            event.preventDefault();
+            const touchEvent = event.touches[0];
+            touch.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
+            touch.y = -(touchEvent.clientY / window.innerHeight) * 2 + 1;
             
             highlightGrid();
         }
         
-        // Handle mouse clicks for tower placement
-        function onMouseClick() {
+        // Handle touch start for tower placement
+        function onTouchStart(event) {
+            event.preventDefault();
+            const touchEvent = event.touches[0];
+            touch.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
+            touch.y = -(touchEvent.clientY / window.innerHeight) * 2 + 1;
+            
             if (!gameState.selectedTower) return;
             
-            raycaster.setFromCamera(mouse, camera);
+            raycaster.setFromCamera(touch, camera);
             const intersects = raycaster.intersectObjects(scene.children);
             
             if (intersects.length > 0) {
@@ -383,6 +423,11 @@ function onTouchStart(event) {
                     placeTower(cell, gameState.selectedTower);
                 }
             }
+        }
+        
+        // Handle touch end
+        function onTouchEnd(event) {
+            event.preventDefault();
         }
         
         // Handle tower selection
@@ -514,7 +559,7 @@ function onTouchStart(event) {
                     } else {
                         const distance = projectile.mesh.position.distanceTo(projectile.target.mesh.position);
                         
-                        if (distance < 10) {
+                        if (distance < 0.5) {
                             // Hit the target
                             if (projectile.type === 'cannon') {
                                 // Splash damage
@@ -548,9 +593,9 @@ function onTouchStart(event) {
             }
         }
         
-        // Highlight grid cell under mouse
+        // Highlight grid cell under touch
         function highlightGrid() {
-            raycaster.setFromCamera(mouse, camera);
+            raycaster.setFromCamera(touch, camera);
             const intersects = raycaster.intersectObjects(scene.children);
             
             // Reset all cell highlighting
@@ -625,24 +670,16 @@ function onTouchStart(event) {
         
         // Check if a tower can be placed on a cell
         function canPlaceTower(cell) {
-    if (!gameState.selectedTower) return false;
-    if (cell.type === 'path' || cell.type === 'rock' || cell.type === 'water') return false;
-    if (cell.tower) return false; // Already occupied
-
-    // Remove unnecessary range restriction
-    return gameState.gold >= towerTypes[gameState.selectedTower].cost;
-}
-
-  function isTowerTooClose(newPosition, minDistance = 0.5) { // Reduce distance if needed
-    for (const tower of gameState.towers) {
-        const distance = tower.mesh.position.distanceTo(newPosition);
-        if (distance < minDistance) {
-            return true;
+            if (!gameState.selectedTower) return false;
+            if (cell.type === 'path' || cell.type === 'rock') return false;
+            if (cell.type === 'water') return false; // Could implement special towers for water later
+            if (cell.tower) return false;
+            
+            // Allow placing towers near existing ones
+            const towerCost = towerTypes[gameState.selectedTower].cost;
+            return gameState.gold >= towerCost;
         }
-    }
-    return false;
-}
-      
+        
         // Place a tower on a cell
         function placeTower(cell, towerType) {
             const towerInfo = towerTypes[towerType];
@@ -768,7 +805,7 @@ function onTouchStart(event) {
                     type: 'cannon',
                     mesh: ballMesh,
                     direction: direction.clone().setY(0.5).normalize(), // Arc trajectory
-                    speed: 50,
+                    speed: 10,
                     target: target,
                     damage: tower.damage,
                     splashRadius: tower.splashRadius
@@ -787,7 +824,7 @@ function onTouchStart(event) {
                     type: 'sniper',
                     mesh: bulletMesh,
                     direction: direction.clone().setY(0.1).normalize(),
-                    speed: 50,
+                    speed: 30,
                     target: target,
                     damage: tower.damage
                 });
