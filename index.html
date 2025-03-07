@@ -607,9 +607,6 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         }
         
         // Highlight grid cell under touch
-        function highlightGrid() {
-            raycaster.setFromCamera(touch, camera);
-            const intersects = raycaster.intersectObjects(scene.children);
             
             function highlightGrid() {
     raycaster.setFromCamera(mouse, camera);
