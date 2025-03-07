@@ -159,16 +159,21 @@
 
     <script>
         // Game state
-        const gameState = {
-            gold: 100,
-            lives: 20,
-            currentWave: 0,
-            waveInProgress: false,
-            selectedTower: null,
-            towers: [],
-            enemies: [],
-            projectiles: []
-        };
+const gameState = {
+    gold: 100,
+    lives: 20,
+    currentWave: 0,
+    waveInProgress: false,
+    selectedTower: null,
+    towers: [],
+    enemies: [],
+    projectiles: []
+};
+
+// Check if the device is a touch device
+function isTouchDevice() {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+}
 
         // Tower types
         const towerTypes = {
@@ -365,10 +370,18 @@
         document.getElementById('start-wave').addEventListener('click', startWave);
         
         // Main Menu Event Listeners
-        document.getElementById('start-game').addEventListener('click', startGame);
-        document.getElementById('show-instructions').addEventListener('click', showInstructions);
-        document.getElementById('exit-game').addEventListener('click', exitGame);
-        document.getElementById('back-to-menu').addEventListener('click', backToMenu);
+document.getElementById('start-game').addEventListener(isTouchDevice() ? 'touchstart' : 'click', startGame);
+document.getElementById('show-instructions').addEventListener(isTouchDevice() ? 'touchstart' : 'click', showInstructions);
+document.getElementById('exit-game').addEventListener(isTouchDevice() ? 'touchstart' : 'click', exitGame);
+document.getElementById('back-to-menu').addEventListener(isTouchDevice() ? 'touchstart' : 'click', backToMenu);
+
+// Tower Selection Buttons
+document.querySelectorAll('.tower-button').forEach(button => {
+    button.addEventListener(isTouchDevice() ? 'touchstart' : 'click', selectTower);
+});
+
+// Start Wave Button
+document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchstart' : 'click', startWave);
 
         // Animation loop
         let lastTime = 0;
@@ -1405,6 +1418,12 @@
             // Close the game window (or redirect to another page)
             window.close();
         }
+
+        // Prevent default touch behavior to avoid scrolling or zooming
+document.body.addEventListener('touchstart', function (event) {
+    event.preventDefault();
+}, { passive: false });
+        
     </script>
 </body>
 </html>
