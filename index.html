@@ -179,34 +179,34 @@ function isTouchDevice() {
         const towerTypes = {
             laser: {
                 cost: 50,
-                damage: 1,
+                damage: 2,
                 range: 5,
                 fireRate: 0.5, // seconds between shots
                 color: 0xff0000,
                 upgradeLevel: 0,
                 upgrades: [
-                    { cost: 75, damage: 2, range: 5, fireRate: 0.5 },
-                    { cost: 125, damage: 2, range: 5, fireRate: 0.3 },
-                    { cost: 200, damage: 3, range: 6, fireRate: 0.3 }
+                    { cost: 75, damage: 3, range: 5, fireRate: 0.5 },
+                    { cost: 125, damage: 3, range: 5, fireRate: 0.3 },
+                    { cost: 200, damage: 4, range: 6, fireRate: 0.3 }
                 ]
             },
             cannon: {
                 cost: 75,
-                damage: 3,
+                damage: 5,
                 range: 3,
                 fireRate: 1.2,
-                splashRadius: 1.5,
+                splashRadius: 5,
                 color: 0x0000ff,
                 upgradeLevel: 0,
                 upgrades: [
-                    { cost: 100, damage: 3, range: 3, fireRate: 1.2, splashRadius: 2.5 },
-                    { cost: 150, damage: 5, range: 3, fireRate: 1.2, splashRadius: 2.5 },
+                    { cost: 100, damage: 6, range: 3, fireRate: 1.2, splashRadius: 2.5 },
+                    { cost: 150, damage: 7, range: 3, fireRate: 1.2, splashRadius: 2.5 },
                     { cost: 250, damage: 8, range: 4, fireRate: 1.0, splashRadius: 3.5 }
                 ]
             },
             sniper: {
                 cost: 100,
-                damage: 8,
+                damage:10,
                 range: 10,
                 fireRate: 2.0,
                 color: 0x00ff00,
