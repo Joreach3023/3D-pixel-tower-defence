@@ -418,25 +418,41 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         
         // Handle touch start for tower placement
         function onTouchStart(event) {
-            event.preventDefault();
-            const touchEvent = event.touches[0];
-            touch.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
-            touch.y = -(touchEvent.clientY / window.innerHeight) * 2 + 1;
+    event.preventDefault();
+    const touchEvent = event.touches[0];
+    touch.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
+    touch.y = -(touchEvent.clientY / window.innerHeight) * 2 + 1;
+    
+    if (!gameState.selectedTower) return;
+    
+    raycaster.setFromCamera(touch, camera);
+    const intersects = raycaster.intersectObjects(scene.children);
+    
+    if (intersects.length > 0) {
+        // Find the first intersection that is a grid cell (terrain)
+        for (const intersect of intersects) {
+            const object = intersect.object;
             
-            if (!gameState.selectedTower) return;
+            // Skip towers and their children when finding placement cells
+            let isTower = false;
+            for (const tower of gameState.towers) {
+                if (object === tower.mesh || tower.mesh.children.includes(object)) {
+                    isTower = true;
+                    break;
+                }
+            }
             
-            raycaster.setFromCamera(touch, camera);
-            const intersects = raycaster.intersectObjects(scene.children);
-            
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const cell = getCellFromPosition(intersect.object.position.x, intersect.object.position.z);
+            if (!isTower) {
+                const cell = getCellFromPosition(object.position.x, object.position.z);
                 
                 if (cell && canPlaceTower(cell)) {
                     placeTower(cell, gameState.selectedTower);
+                    break;
                 }
             }
         }
+    }
+}
         
         // Handle touch end
         function onTouchEnd(event) {
@@ -609,7 +625,7 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         // Highlight grid cell under touch
             
             function highlightGrid() {
-    raycaster.setFromCamera(mouse, camera);
+    raycaster.setFromCamera(touch, camera); // Use touch instead of mouse
     const intersects = raycaster.intersectObjects(scene.children);
     
     // Reset all cell highlighting
@@ -623,16 +639,35 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
     }
     
     if (intersects.length > 0) {
-        const intersect = intersects[0];
-        const cell = getCellFromPosition(intersect.object.position.x, intersect.object.position.z);
-        
-        if (cell && gameState.selectedTower && canPlaceTower(cell)) {
-            cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight for valid placement
-        } else if (cell && (!canPlaceTower(cell) || !gameState.selectedTower)) {
-            cell.mesh.material.emissive.setHex(0xff0000); // Red highlight for invalid placement
+        // Find the first intersection that is a grid cell (terrain)
+        for (const intersect of intersects) {
+            const object = intersect.object;
+            
+            // Skip towers and their children when finding placement cells
+            let isTower = false;
+            for (const tower of gameState.towers) {
+                if (object === tower.mesh || tower.mesh.children.includes(object)) {
+                    isTower = true;
+                    break;
+                }
+            }
+            
+            if (!isTower) {
+                const cell = getCellFromPosition(object.position.x, object.position.z);
+                
+                if (cell) {
+                    if (gameState.selectedTower && canPlaceTower(cell)) {
+                        cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight for valid placement
+                    } else if (!canPlaceTower(cell) || !gameState.selectedTower) {
+                        cell.mesh.material.emissive.setHex(0xff0000); // Red highlight for invalid placement
+                    }
+                    break; // Only highlight the first valid cell
+                }
+            }
         }
     }
 }
+
         
         // Create enemy path
         function createPath() {
