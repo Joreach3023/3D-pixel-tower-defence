@@ -611,27 +611,31 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
             raycaster.setFromCamera(touch, camera);
             const intersects = raycaster.intersectObjects(scene.children);
             
-            // Reset all cell highlighting
-            for (let x = 0; x < gridSize; x++) {
-                for (let z = 0; z < gridSize; z++) {
-                    const cell = grid[x][z];
-                    if (cell.type !== 'path') {
-                        cell.mesh.material.emissive.setHex(0x000000);
-                    }
-                }
-            }
-            
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const cell = getCellFromPosition(intersect.object.position.x, intersect.object.position.z);
-                
-                if (cell && gameState.selectedTower && canPlaceTower(cell)) {
-                    cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight
-                } else if (cell && (!canPlaceTower(cell) || !gameState.selectedTower)) {
-                    cell.mesh.material.emissive.setHex(0xff0000); // Red highlight
-                }
+            function highlightGrid() {
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children);
+    
+    // Reset all cell highlighting
+    for (let x = 0; x < gridSize; x++) {
+        for (let z = 0; z < gridSize; z++) {
+            const cell = grid[x][z];
+            if (cell.type !== 'path') {
+                cell.mesh.material.emissive.setHex(0x000000); // Reset highlight
             }
         }
+    }
+    
+    if (intersects.length > 0) {
+        const intersect = intersects[0];
+        const cell = getCellFromPosition(intersect.object.position.x, intersect.object.position.z);
+        
+        if (cell && gameState.selectedTower && canPlaceTower(cell)) {
+            cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight for valid placement
+        } else if (cell && (!canPlaceTower(cell) || !gameState.selectedTower)) {
+            cell.mesh.material.emissive.setHex(0xff0000); // Red highlight for invalid placement
+        }
+    }
+}
         
         // Create enemy path
         function createPath() {
@@ -691,58 +695,67 @@ function canPlaceTower(cell) {
     // Check if player has enough gold
     const towerCost = towerTypes[gameState.selectedTower].cost;
     return gameState.gold >= towerCost;
+}
+
             
-            // Deduct gold
-            gameState.gold -= towerInfo.cost;
-            document.getElementById('gold').textContent = gameState.gold;
-            
-            // Create tower mesh
-            const towerGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 8);
-            const towerMaterial = new THREE.MeshPhongMaterial({ color: towerInfo.color });
-            const towerMesh = new THREE.Mesh(towerGeometry, towerMaterial);
-            towerMesh.position.set(cell.worldX, 0.6, cell.worldZ);
-            towerMesh.castShadow = true;
-            scene.add(towerMesh);
-            
-            // Create tower turret
-            const turretGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
-            const turretMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
-            const turretMesh = new THREE.Mesh(turretGeometry, turretMaterial);
-            turretMesh.position.set(0, 0.5, 0.2);
-            towerMesh.add(turretMesh);
-            
-            // Create range indicator (hidden by default)
-            const rangeGeometry = new THREE.RingGeometry(0.1, towerInfo.range, 32);
-            const rangeMaterial = new THREE.MeshBasicMaterial({ 
-                color: 0xffff00, 
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 0.3,
-                visible: false
-            });
-            const rangeMesh = new THREE.Mesh(rangeGeometry, rangeMaterial);
-            rangeMesh.rotation.x = -Math.PI / 2; // Flat on ground
-            rangeMesh.position.y = 0.1;
-            towerMesh.add(rangeMesh);
-            
-            // Store tower data
-            const tower = {
-                type: towerType,
-                mesh: towerMesh,
-                turret: turretMesh,
-                range: towerInfo.range,
-                rangeMesh: rangeMesh,
-                damage: towerInfo.damage,
-                fireRate: towerInfo.fireRate,
-                cooldown: 0,
-                upgradeLevel: 0,
-                cell: cell,
-                splashRadius: towerInfo.splashRadius
-            };
-            
-            gameState.towers.push(tower);
-            cell.tower = tower;
-        }
+            // Place a tower on a cell
+function placeTower(cell, towerType) {
+    const towerInfo = towerTypes[towerType];
+
+    // Check if player has enough gold
+    if (gameState.gold < towerInfo.cost) return;
+
+    // Deduct gold
+    gameState.gold -= towerInfo.cost;
+    document.getElementById('gold').textContent = gameState.gold;
+
+    // Create tower mesh
+    const towerGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 8);
+    const towerMaterial = new THREE.MeshPhongMaterial({ color: towerInfo.color });
+    const towerMesh = new THREE.Mesh(towerGeometry, towerMaterial);
+    towerMesh.position.set(cell.worldX, 0.6, cell.worldZ);
+    towerMesh.castShadow = true;
+    scene.add(towerMesh);
+
+    // Create tower turret
+    const turretGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
+    const turretMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+    const turretMesh = new THREE.Mesh(turretGeometry, turretMaterial);
+    turretMesh.position.set(0, 0.5, 0.2);
+    towerMesh.add(turretMesh);
+
+    // Create range indicator (hidden by default)
+    const rangeGeometry = new THREE.RingGeometry(0.1, towerInfo.range, 32);
+    const rangeMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.3,
+        visible: false
+    });
+    const rangeMesh = new THREE.Mesh(rangeGeometry, rangeMaterial);
+    rangeMesh.rotation.x = -Math.PI / 2; // Flat on ground
+    rangeMesh.position.y = 0.1;
+    towerMesh.add(rangeMesh);
+
+    // Store tower data
+    const tower = {
+        type: towerType,
+        mesh: towerMesh,
+        turret: turretMesh,
+        range: towerInfo.range,
+        rangeMesh: rangeMesh,
+        damage: towerInfo.damage,
+        fireRate: towerInfo.fireRate,
+        cooldown: 0,
+        upgradeLevel: 0,
+        cell: cell,
+        splashRadius: towerInfo.splashRadius
+    };
+
+    gameState.towers.push(tower);
+    cell.tower = tower;
+}
         
         // Find a target for a tower
         function findTarget(tower) {
