@@ -152,6 +152,17 @@
     </div>
     <button id="start-wave">Start Wave</button>
 
+    <!-- Audio Elements -->
+    <audio id="canon-sound" src="assets/canon sound.wav" preload="auto"></audio>
+    <audio id="click-sound" src="assets/click sound.wav" preload="auto"></audio>
+    <audio id="enemy-death-sound" src="assets/enemies death sound.wav" preload="auto"></audio>
+    <audio id="game-music" src="assets/Game Music.mp3" loop preload="auto"></audio>
+    <audio id="game-over-sound" src="assets/game over sound.wav" preload="auto"></audio>
+    <audio id="laser-sound" src="assets/laser sound.wav" preload="auto"></audio>
+    <audio id="sniper-sound" src="assets/sniper sound.wav" preload="auto"></audio>
+    <audio id="title-music" src="assets/Title Screen Music.mp3" loop preload="auto"></audio>
+    <audio id="upgrade-sound" src="assets/upgrade sound.wav" preload="auto"></audio>
+
     <!-- Chargement de Three.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
     <!-- Chargement de OrbitControls.js -->
@@ -159,21 +170,21 @@
 
     <script>
         // Game state
-const gameState = {
-    gold: 100,
-    lives: 20,
-    currentWave: 0,
-    waveInProgress: false,
-    selectedTower: null,
-    towers: [],
-    enemies: [],
-    projectiles: []
-};
+        const gameState = {
+            gold: 100,
+            lives: 20,
+            currentWave: 0,
+            waveInProgress: false,
+            selectedTower: null,
+            towers: [],
+            enemies: [],
+            projectiles: []
+        };
 
-// Check if the device is a touch device
-function isTouchDevice() {
-    return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-}
+        // Check if the device is a touch device
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+        }
 
         // Tower types
         const towerTypes = {
@@ -370,18 +381,18 @@ function isTouchDevice() {
         document.getElementById('start-wave').addEventListener('click', startWave);
         
         // Main Menu Event Listeners
-document.getElementById('start-game').addEventListener(isTouchDevice() ? 'touchstart' : 'click', startGame);
-document.getElementById('show-instructions').addEventListener(isTouchDevice() ? 'touchstart' : 'click', showInstructions);
-document.getElementById('exit-game').addEventListener(isTouchDevice() ? 'touchstart' : 'click', exitGame);
-document.getElementById('back-to-menu').addEventListener(isTouchDevice() ? 'touchstart' : 'click', backToMenu);
+        document.getElementById('start-game').addEventListener(isTouchDevice() ? 'touchstart' : 'click', startGame);
+        document.getElementById('show-instructions').addEventListener(isTouchDevice() ? 'touchstart' : 'click', showInstructions);
+        document.getElementById('exit-game').addEventListener(isTouchDevice() ? 'touchstart' : 'click', exitGame);
+        document.getElementById('back-to-menu').addEventListener(isTouchDevice() ? 'touchstart' : 'click', backToMenu);
 
-// Tower Selection Buttons
-document.querySelectorAll('.tower-button').forEach(button => {
-    button.addEventListener(isTouchDevice() ? 'touchstart' : 'click', selectTower);
-});
+        // Tower Selection Buttons
+        document.querySelectorAll('.tower-button').forEach(button => {
+            button.addEventListener(isTouchDevice() ? 'touchstart' : 'click', selectTower);
+        });
 
-// Start Wave Button
-document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchstart' : 'click', startWave);
+        // Start Wave Button
+        document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchstart' : 'click', startWave);
 
         // Animation loop
         let lastTime = 0;
@@ -418,41 +429,41 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         
         // Handle touch start for tower placement
         function onTouchStart(event) {
-    event.preventDefault();
-    const touchEvent = event.touches[0];
-    touch.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
-    touch.y = -(touchEvent.clientY / window.innerHeight) * 2 + 1;
-    
-    if (!gameState.selectedTower) return;
-    
-    raycaster.setFromCamera(touch, camera);
-    const intersects = raycaster.intersectObjects(scene.children);
-    
-    if (intersects.length > 0) {
-        // Find the first intersection that is a grid cell (terrain)
-        for (const intersect of intersects) {
-            const object = intersect.object;
+            event.preventDefault();
+            const touchEvent = event.touches[0];
+            touch.x = (touchEvent.clientX / window.innerWidth) * 2 - 1;
+            touch.y = -(touchEvent.clientY / window.innerHeight) * 2 + 1;
             
-            // Skip towers and their children when finding placement cells
-            let isTower = false;
-            for (const tower of gameState.towers) {
-                if (object === tower.mesh || tower.mesh.children.includes(object)) {
-                    isTower = true;
-                    break;
-                }
-            }
+            if (!gameState.selectedTower) return;
             
-            if (!isTower) {
-                const cell = getCellFromPosition(object.position.x, object.position.z);
-                
-                if (cell && canPlaceTower(cell)) {
-                    placeTower(cell, gameState.selectedTower);
-                    break;
+            raycaster.setFromCamera(touch, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            
+            if (intersects.length > 0) {
+                // Find the first intersection that is a grid cell (terrain)
+                for (const intersect of intersects) {
+                    const object = intersect.object;
+                    
+                    // Skip towers and their children when finding placement cells
+                    let isTower = false;
+                    for (const tower of gameState.towers) {
+                        if (object === tower.mesh || tower.mesh.children.includes(object)) {
+                            isTower = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isTower) {
+                        const cell = getCellFromPosition(object.position.x, object.position.z);
+                        
+                        if (cell && canPlaceTower(cell)) {
+                            placeTower(cell, gameState.selectedTower);
+                            break;
+                        }
+                    }
                 }
             }
         }
-    }
-}
         
         // Handle touch end
         function onTouchEnd(event) {
@@ -623,52 +634,50 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         }
         
         // Highlight grid cell under touch
+        function highlightGrid() {
+            raycaster.setFromCamera(touch, camera); // Use touch instead of mouse
+            const intersects = raycaster.intersectObjects(scene.children);
             
-            function highlightGrid() {
-    raycaster.setFromCamera(touch, camera); // Use touch instead of mouse
-    const intersects = raycaster.intersectObjects(scene.children);
-    
-    // Reset all cell highlighting
-    for (let x = 0; x < gridSize; x++) {
-        for (let z = 0; z < gridSize; z++) {
-            const cell = grid[x][z];
-            if (cell.type !== 'path') {
-                cell.mesh.material.emissive.setHex(0x000000); // Reset highlight
-            }
-        }
-    }
-    
-    if (intersects.length > 0) {
-        // Find the first intersection that is a grid cell (terrain)
-        for (const intersect of intersects) {
-            const object = intersect.object;
-            
-            // Skip towers and their children when finding placement cells
-            let isTower = false;
-            for (const tower of gameState.towers) {
-                if (object === tower.mesh || tower.mesh.children.includes(object)) {
-                    isTower = true;
-                    break;
-                }
-            }
-            
-            if (!isTower) {
-                const cell = getCellFromPosition(object.position.x, object.position.z);
-                
-                if (cell) {
-                    if (gameState.selectedTower && canPlaceTower(cell)) {
-                        cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight for valid placement
-                    } else if (!canPlaceTower(cell) || !gameState.selectedTower) {
-                        cell.mesh.material.emissive.setHex(0xff0000); // Red highlight for invalid placement
+            // Reset all cell highlighting
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    const cell = grid[x][z];
+                    if (cell.type !== 'path') {
+                        cell.mesh.material.emissive.setHex(0x000000); // Reset highlight
                     }
-                    break; // Only highlight the first valid cell
+                }
+            }
+            
+            if (intersects.length > 0) {
+                // Find the first intersection that is a grid cell (terrain)
+                for (const intersect of intersects) {
+                    const object = intersect.object;
+                    
+                    // Skip towers and their children when finding placement cells
+                    let isTower = false;
+                    for (const tower of gameState.towers) {
+                        if (object === tower.mesh || tower.mesh.children.includes(object)) {
+                            isTower = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isTower) {
+                        const cell = getCellFromPosition(object.position.x, object.position.z);
+                        
+                        if (cell) {
+                            if (gameState.selectedTower && canPlaceTower(cell)) {
+                                cell.mesh.material.emissive.setHex(0x00ff00); // Green highlight for valid placement
+                            } else if (!canPlaceTower(cell) || !gameState.selectedTower) {
+                                cell.mesh.material.emissive.setHex(0xff0000); // Red highlight for invalid placement
+                            }
+                            break; // Only highlight the first valid cell
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
-        
         // Create enemy path
         function createPath() {
             const pathCurve = new THREE.SplineCurve([
@@ -718,76 +727,75 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
         }
         
         // Check if a tower can be placed on a cell
-function canPlaceTower(cell) {
-    if (!gameState.selectedTower) return false; // No tower selected
-    if (cell.type === 'path' || cell.type === 'rock') return false; // Cannot place on path or rock
-    if (cell.type === 'water') return false; // Cannot place on water (unless you add water towers later)
-    if (cell.tower) return false; // Cell already has a tower
+        function canPlaceTower(cell) {
+            if (!gameState.selectedTower) return false; // No tower selected
+            if (cell.type === 'path' || cell.type === 'rock') return false; // Cannot place on path or rock
+            if (cell.type === 'water') return false; // Cannot place on water (unless you add water towers later)
+            if (cell.tower) return false; // Cell already has a tower
 
-    // Check if player has enough gold
-    const towerCost = towerTypes[gameState.selectedTower].cost;
-    return gameState.gold >= towerCost;
-}
+            // Check if player has enough gold
+            const towerCost = towerTypes[gameState.selectedTower].cost;
+            return gameState.gold >= towerCost;
+        }
 
-            
-            // Place a tower on a cell
-function placeTower(cell, towerType) {
-    const towerInfo = towerTypes[towerType];
+        // Place a tower on a cell
+        function placeTower(cell, towerType) {
+            const towerInfo = towerTypes[towerType];
 
-    // Check if player has enough gold
-    if (gameState.gold < towerInfo.cost) return;
+            // Check if player has enough gold
+            if (gameState.gold < towerInfo.cost) return;
 
-    // Deduct gold
-    gameState.gold -= towerInfo.cost;
-    document.getElementById('gold').textContent = gameState.gold;
+            // Deduct gold
+            gameState.gold -= towerInfo.cost;
+            document.getElementById('gold').textContent = gameState.gold;
 
-    // Create tower mesh
-    const towerGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 8);
-    const towerMaterial = new THREE.MeshPhongMaterial({ color: towerInfo.color });
-    const towerMesh = new THREE.Mesh(towerGeometry, towerMaterial);
-    towerMesh.position.set(cell.worldX, 0.6, cell.worldZ);
-    towerMesh.castShadow = true;
-    scene.add(towerMesh);
+            // Create tower mesh
+            const towerGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 8);
+            const towerMaterial = new THREE.MeshPhongMaterial({ color: towerInfo.color });
+            const towerMesh = new THREE.Mesh(towerGeometry, towerMaterial);
+            towerMesh.position.set(cell.worldX, 0.6, cell.worldZ);
+            towerMesh.castShadow = true;
+            scene.add(towerMesh);
 
-    // Create tower turret
-    const turretGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
-    const turretMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
-    const turretMesh = new THREE.Mesh(turretGeometry, turretMaterial);
-    turretMesh.position.set(0, 0.5, 0.2);
-    towerMesh.add(turretMesh);
+            // Create tower turret
+            const turretGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
+            const turretMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const turretMesh = new THREE.Mesh(turretGeometry, turretMaterial);
+            turretMesh.position.set(0, 0.5, 0.2);
+            towerMesh.add(turretMesh);
 
-    // Create range indicator (hidden by default)
-    const rangeGeometry = new THREE.RingGeometry(0.1, towerInfo.range, 32);
-    const rangeMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffff00,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.3,
-        visible: false
-    });
-    const rangeMesh = new THREE.Mesh(rangeGeometry, rangeMaterial);
-    rangeMesh.rotation.x = -Math.PI / 2; // Flat on ground
-    rangeMesh.position.y = 0.1;
-    towerMesh.add(rangeMesh);
+            // Create range indicator (hidden by default)
+            const rangeGeometry = new THREE.RingGeometry(0.1, towerInfo.range, 32);
+            const rangeMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffff00,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.3,
+                visible: false
+            });
+            const rangeMesh = new THREE.Mesh(rangeGeometry, rangeMaterial);
+            rangeMesh.rotation.x = -Math.PI / 2; // Flat on ground
+            rangeMesh.position.y = 0.1;
+            towerMesh.add(rangeMesh);
 
-    // Store tower data
-    const tower = {
-        type: towerType,
-        mesh: towerMesh,
-        turret: turretMesh,
-        range: towerInfo.range,
-        rangeMesh: rangeMesh,
-        damage: towerInfo.damage,
-        fireRate: towerInfo.fireRate,
-        cooldown: 0,
-        upgradeLevel: 0,
-        cell: cell,
-        splashRadius: towerInfo.splashRadius
-    };
+            // Store tower data
+            const tower = {
+                type: towerType,
+                mesh: towerMesh,
+                turret: turretMesh,
+                range: towerInfo.range,
+                rangeMesh: rangeMesh,
+                damage: towerInfo.damage,
+                fireRate: towerInfo.fireRate,
+                cooldown: 0,
+                upgradeLevel: 0,
+                cell: cell,
+                splashRadius: towerInfo.splashRadius
+            };
 
-    gameState.towers.push(tower);
-    cell.tower = tower;
-}
+            gameState.towers.push(tower);
+            cell.tower = tower;
+        }
         
         // Find a target for a tower
         function findTarget(tower) {
@@ -807,80 +815,89 @@ function placeTower(cell, towerType) {
         }
         
         function fireTower(tower, target) {
-    // Rotate turret to face target
-    const direction = new THREE.Vector3()
-        .subVectors(target.mesh.position, tower.mesh.position)
-        .normalize();
-    
-    tower.turret.lookAt(target.mesh.position);
-    
-    if (tower.type === 'laser') {
-        // Create laser beam
-        const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
-        const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const laserMesh = new THREE.Mesh(laserGeometry, laserMaterial);
-        
-        // Position and orient the laser
-        const distance = tower.mesh.position.distanceTo(target.mesh.position);
-        laserMesh.scale.set(1, distance, 1);
-        laserMesh.position.copy(tower.mesh.position)
-            .add(direction.clone().multiplyScalar(distance / 2));
-        laserMesh.lookAt(target.mesh.position);
-        laserMesh.rotateX(Math.PI / 2);
-        
-        scene.add(laserMesh);
-        
-        // Add to projectiles with short lifetime
-        gameState.projectiles.push({
-            type: 'laser',
-            mesh: laserMesh,
-            lifetime: 0.1,
-            target: target
-        });
-        
-        // Apply damage instantly
-        damageEnemy(target, tower.damage);
-    } else if (tower.type === 'cannon') {
-        // Apply splash damage instantly
-        dealSplashDamage(target.mesh.position, tower.splashRadius, tower.damage);
-        
-        // Create a visual effect for the cannon shot
-        const explosionGeometry = new THREE.SphereGeometry(0.5, 8, 8);
-        const explosionMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
-        const explosionMesh = new THREE.Mesh(explosionGeometry, explosionMaterial);
-        explosionMesh.position.copy(target.mesh.position);
-        scene.add(explosionMesh);
-        
-        // Remove the explosion effect after a short time
-        setTimeout(() => {
-            scene.remove(explosionMesh);
-        }, 200); // Remove after 200ms
-    } else if (tower.type === 'sniper') {
-        // Apply direct damage instantly
-        damageEnemy(target, tower.damage);
-        
-        // Create a visual effect for the sniper shot
-        const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-        const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
-        const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-        bulletMesh.position.copy(tower.mesh.position);
-        bulletMesh.position.y += 0.5;
-        scene.add(bulletMesh);
-        
-        // Animate the bullet moving toward the target
-        const bulletSpeed = 30;
-        const bulletDirection = direction.clone().setY(0.1).normalize();
-        const bulletInterval = setInterval(() => {
-            bulletMesh.position.add(bulletDirection.clone().multiplyScalar(bulletSpeed * 0.016)); // Move bullet
+            // Rotate turret to face target
+            const direction = new THREE.Vector3()
+                .subVectors(target.mesh.position, tower.mesh.position)
+                .normalize();
             
-            // Check if bullet reached the target
-            if (bulletMesh.position.distanceTo(target.mesh.position) < 0.5) {
-                clearInterval(bulletInterval);
-                scene.remove(bulletMesh);
+            tower.turret.lookAt(target.mesh.position);
+            
+            if (tower.type === 'laser') {
+                // Play laser sound
+                document.getElementById('laser-sound').play();
+
+                // Create laser beam
+                const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
+                const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                const laserMesh = new THREE.Mesh(laserGeometry, laserMaterial);
+                
+                // Position and orient the laser
+                const distance = tower.mesh.position.distanceTo(target.mesh.position);
+                laserMesh.scale.set(1, distance, 1);
+                laserMesh.position.copy(tower.mesh.position)
+                    .add(direction.clone().multiplyScalar(distance / 2));
+                laserMesh.lookAt(target.mesh.position);
+                laserMesh.rotateX(Math.PI / 2);
+                
+                scene.add(laserMesh);
+                
+                // Add to projectiles with short lifetime
+                gameState.projectiles.push({
+                    type: 'laser',
+                    mesh: laserMesh,
+                    lifetime: 0.1,
+                    target: target
+                });
+                
+                // Apply damage instantly
+                damageEnemy(target, tower.damage);
+            } else if (tower.type === 'cannon') {
+                // Play cannon sound
+                document.getElementById('canon-sound').play();
+
+                // Apply splash damage instantly
+                dealSplashDamage(target.mesh.position, tower.splashRadius, tower.damage);
+                
+                // Create a visual effect for the cannon shot
+                const explosionGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+                const explosionMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+                const explosionMesh = new THREE.Mesh(explosionGeometry, explosionMaterial);
+                explosionMesh.position.copy(target.mesh.position);
+                scene.add(explosionMesh);
+                
+                // Remove the explosion effect after a short time
+                setTimeout(() => {
+                    scene.remove(explosionMesh);
+                }, 200); // Remove after 200ms
+            } else if (tower.type === 'sniper') {
+                // Play sniper sound
+                document.getElementById('sniper-sound').play();
+
+                // Apply direct damage instantly
+                damageEnemy(target, tower.damage);
+                
+                // Create a visual effect for the sniper shot
+                const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+                const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
+                bulletMesh.position.copy(tower.mesh.position);
+                bulletMesh.position.y += 0.5;
+                scene.add(bulletMesh);
+                
+                // Animate the bullet moving toward the target
+                const bulletSpeed = 30;
+                const bulletDirection = direction.clone().setY(0.1).normalize();
+                const bulletInterval = setInterval(() => {
+                    bulletMesh.position.add(bulletDirection.clone().multiplyScalar(bulletSpeed * 0.016)); // Move bullet
+                    
+                    // Check if bullet reached the target
+                    if (bulletMesh.position.distanceTo(target.mesh.position) < 0.5) {
+                        clearInterval(bulletInterval);
+                        scene.remove(bulletMesh);
+                    }
+                }, 16); // Approximately 60fps
             }
-        }, 16); // Approximately 60fps
-    }
-}
+        }
         
         // Deal splash damage around a point
         function dealSplashDamage(position, radius, damage) {
@@ -999,6 +1016,9 @@ function placeTower(cell, towerType) {
             updateHealthBar(enemy);
             
             if (enemy.health <= 0) {
+                // Play enemy death sound
+                document.getElementById('enemy-death-sound').play();
+
                 // Give player reward
                 gameState.gold += enemy.reward;
                 document.getElementById('gold').textContent = gameState.gold;
@@ -1104,6 +1124,9 @@ function placeTower(cell, towerType) {
             
             // Check if game over
             if (gameState.lives <= 0) {
+                // Play game over sound
+                document.getElementById('game-over-sound').play();
+
                 alert('Game Over! You survived ' + gameState.currentWave + ' waves.');
                 resetGame();
             }
@@ -1258,6 +1281,9 @@ function placeTower(cell, towerType) {
             gameState.gold -= upgradeCost;
             document.getElementById('gold').textContent = gameState.gold;
             
+            // Play upgrade sound
+            document.getElementById('upgrade-sound').play();
+
             // Apply upgrade
             const upgradeInfo = towerTypes[towerType].upgrades[nextLevel - 1];
             
@@ -1432,6 +1458,10 @@ function placeTower(cell, towerType) {
             document.getElementById('tower-selection').style.display = 'flex';
             document.getElementById('start-wave').style.display = 'block';
             
+            // Stop title music and play game music
+            document.getElementById('title-music').pause();
+            document.getElementById('game-music').play();
+            
             // Reset the game state
             resetGame();
         }
@@ -1450,6 +1480,10 @@ function placeTower(cell, towerType) {
             
             // Show the main menu
             document.getElementById('main-menu').style.display = 'block';
+            
+            // Stop game music and play title music
+            document.getElementById('game-music').pause();
+            document.getElementById('title-music').play();
         }
 
         function exitGame() {
@@ -1458,9 +1492,9 @@ function placeTower(cell, towerType) {
         }
 
         // Prevent default touch behavior to avoid scrolling or zooming
-document.body.addEventListener('touchstart', function (event) {
-    event.preventDefault();
-}, { passive: false });
+        document.body.addEventListener('touchstart', function (event) {
+            event.preventDefault();
+        }, { passive: false });
         
     </script>
 </body>
