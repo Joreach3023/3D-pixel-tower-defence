@@ -769,80 +769,81 @@ document.getElementById('start-wave').addEventListener(isTouchDevice() ? 'touchs
             return closest;
         }
         
-        // Fire tower at target
         function fireTower(tower, target) {
-            // Rotate turret to face target
-            const direction = new THREE.Vector3()
-                .subVectors(target.mesh.position, tower.mesh.position)
-                .normalize();
+    // Rotate turret to face target
+    const direction = new THREE.Vector3()
+        .subVectors(target.mesh.position, tower.mesh.position)
+        .normalize();
+    
+    tower.turret.lookAt(target.mesh.position);
+    
+    if (tower.type === 'laser') {
+        // Create laser beam
+        const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
+        const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const laserMesh = new THREE.Mesh(laserGeometry, laserMaterial);
+        
+        // Position and orient the laser
+        const distance = tower.mesh.position.distanceTo(target.mesh.position);
+        laserMesh.scale.set(1, distance, 1);
+        laserMesh.position.copy(tower.mesh.position)
+            .add(direction.clone().multiplyScalar(distance / 2));
+        laserMesh.lookAt(target.mesh.position);
+        laserMesh.rotateX(Math.PI / 2);
+        
+        scene.add(laserMesh);
+        
+        // Add to projectiles with short lifetime
+        gameState.projectiles.push({
+            type: 'laser',
+            mesh: laserMesh,
+            lifetime: 0.1,
+            target: target
+        });
+        
+        // Apply damage instantly
+        damageEnemy(target, tower.damage);
+    } else if (tower.type === 'cannon') {
+        // Apply splash damage instantly
+        dealSplashDamage(target.mesh.position, tower.splashRadius, tower.damage);
+        
+        // Create a visual effect for the cannon shot
+        const explosionGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+        const explosionMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const explosionMesh = new THREE.Mesh(explosionGeometry, explosionMaterial);
+        explosionMesh.position.copy(target.mesh.position);
+        scene.add(explosionMesh);
+        
+        // Remove the explosion effect after a short time
+        setTimeout(() => {
+            scene.remove(explosionMesh);
+        }, 200); // Remove after 200ms
+    } else if (tower.type === 'sniper') {
+        // Apply direct damage instantly
+        damageEnemy(target, tower.damage);
+        
+        // Create a visual effect for the sniper shot
+        const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+        const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
+        bulletMesh.position.copy(tower.mesh.position);
+        bulletMesh.position.y += 0.5;
+        scene.add(bulletMesh);
+        
+        // Animate the bullet moving toward the target
+        const bulletSpeed = 30;
+        const bulletDirection = direction.clone().setY(0.1).normalize();
+        const bulletInterval = setInterval(() => {
+            bulletMesh.position.add(bulletDirection.clone().multiplyScalar(bulletSpeed * 0.016)); // Move bullet
             
-            tower.turret.lookAt(target.mesh.position);
-            
-            if (tower.type === 'laser') {
-                // Create laser beam
-                const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
-                const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                const laserMesh = new THREE.Mesh(laserGeometry, laserMaterial);
-                
-                // Position and orient the laser
-                const distance = tower.mesh.position.distanceTo(target.mesh.position);
-                laserMesh.scale.set(1, distance, 1);
-                laserMesh.position.copy(tower.mesh.position)
-                    .add(direction.clone().multiplyScalar(distance / 2));
-                laserMesh.lookAt(target.mesh.position);
-                laserMesh.rotateX(Math.PI / 2);
-                
-                scene.add(laserMesh);
-                
-                // Add to projectiles with short lifetime
-                gameState.projectiles.push({
-                    type: 'laser',
-                    mesh: laserMesh,
-                    lifetime: 0.1,
-                    target: target
-                });
-                
-                // Apply damage instantly
-                damageEnemy(target, tower.damage);
-            } else if (tower.type === 'cannon') {
-                // Create cannonball
-                const ballGeometry = new THREE.SphereGeometry(0.2, 8, 8);
-                const ballMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
-                const ballMesh = new THREE.Mesh(ballGeometry, ballMaterial);
-                ballMesh.position.copy(tower.mesh.position);
-                ballMesh.position.y += 0.5;
-                
-                scene.add(ballMesh);
-                
-                gameState.projectiles.push({
-                    type: 'cannon',
-                    mesh: ballMesh,
-                    direction: direction.clone().setY(0.5).normalize(), // Arc trajectory
-                    speed: 10,
-                    target: target,
-                    damage: tower.damage,
-                    splashRadius: tower.splashRadius
-                });
-            } else if (tower.type === 'sniper') {
-                // Create sniper bullet
-                const bulletGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-                const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
-                const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-                bulletMesh.position.copy(tower.mesh.position);
-                bulletMesh.position.y += 0.5;
-                
-                scene.add(bulletMesh);
-                
-                gameState.projectiles.push({
-                    type: 'sniper',
-                    mesh: bulletMesh,
-                    direction: direction.clone().setY(0.1).normalize(),
-                    speed: 30,
-                    target: target,
-                    damage: tower.damage
-                });
+            // Check if bullet reached the target
+            if (bulletMesh.position.distanceTo(target.mesh.position) < 0.5) {
+                clearInterval(bulletInterval);
+                scene.remove(bulletMesh);
             }
-        }
+        }, 16); // Approximately 60fps
+    }
+}
         
         // Deal splash damage around a point
         function dealSplashDamage(position, radius, damage) {
