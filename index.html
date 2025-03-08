@@ -190,7 +190,13 @@
             enemies: [],
             projectiles: []
         };
+        
+// Add this line
+const mouse = new THREE.Vector2();
 
+// Variable for fast forward mode
+let fastMode = false;
+        
         // Check if the device is a touch device
         function isTouchDevice() {
             return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
@@ -396,6 +402,16 @@
         // Raycaster for touch interaction
         const raycaster = new THREE.Raycaster();
         const touch = new THREE.Vector2();
+
+// Event listeners based on device type
+if (isTouchDevice()) {
+    window.addEventListener('touchstart', onTouchStart, { passive: false });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+} else {
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('click', onMouseClick);
+}
         
         // Event listeners for touch devices
         window.addEventListener('resize', onWindowResize);
@@ -557,9 +573,9 @@ if (!isTouchDevice()) {
             const towerCost = parseInt(event.currentTarget.dataset.cost);
             
             // Deselect all buttons
-            document.querySelectorAll('.tower-button').forEach(btn => {
-                btn.classList.remove('selected');
-            });
+            document.querySelectorAll('.tower-button').forEach(button => {
+    button.addEventListener(isTouchDevice() ? 'touchstart' : 'click', selectTower);
+});
             
             if (gameState.selectedTower === towerType) {
                 // Deselect if clicking the same tower
@@ -716,9 +732,14 @@ if (!isTouchDevice()) {
         
         // Highlight grid cell under touch
         function highlightGrid() {
-            raycaster.setFromCamera(touch, camera); // Use touch instead of mouse
-            const intersects = raycaster.intersectObjects(scene.children);
-            
+    // Use appropriate pointer data based on device type
+    const pointer = isTouchDevice() ? touch : mouse;
+    raycaster.setFromCamera(pointer, camera);
+    
+    const intersects = raycaster.intersectObjects(scene.children);
+    
+    // Rest of your highlighting code...
+}
             // Reset all cell highlighting
             for (let x = 0; x < gridSize; x++) {
                 for (let z = 0; z < gridSize; z++) {
@@ -1399,6 +1420,31 @@ if (!isTouchDevice()) {
         
         // Add tower selection and upgrade UI
         function setupTowerUI() {
+            // Add this inside your setupTowerUI function:
+const eventType = isTouchDevice() ? 'touchstart' : 'click';
+window.addEventListener(eventType, (event) => {
+    if (gameState.selectedTower && typeof gameState.selectedTower === 'string') {
+        // We're in tower placement mode, don't select towers
+        return;
+    }
+    
+    // Set the appropriate coordinates based on device type
+    if (isTouchDevice() && event.touches && event.touches[0]) {
+        touch.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+        touch.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(touch, camera);
+    } else if (!isTouchDevice()) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+    } else {
+        return; // Invalid event
+    }
+    
+    const intersects = raycaster.intersectObjects(scene.children);
+    
+    // Rest of your tower selection code...
+});
             // Create tower upgrade button
             const upgradeButton = document.createElement('button');
             upgradeButton.id = 'upgrade-tower';
@@ -1576,9 +1622,12 @@ if (!isTouchDevice()) {
         }
 
         // Prevent default touch behavior to avoid scrolling or zooming
-        document.body.addEventListener('touchstart', function (event) {
-            event.preventDefault();
-        }, { passive: false });
+document.body.addEventListener('touchstart', function (event) {
+    // Only prevent default if we're in the game (not in menus)
+    if (document.getElementById('main-menu').style.display === 'none') {
+        event.preventDefault();
+    }
+}, { passive: false });
     </script>
 </body>
 </html>
