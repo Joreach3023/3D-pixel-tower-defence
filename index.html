@@ -216,17 +216,15 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
      // Initialize Supabase
-const { createClient } = supabase;
-const supabaseClient = createClient(
-  "https://ivwubazshhwdwbcovuuk.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml2d3ViYXpzaGh3ZHdiY292dXVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0MDE2NTksImV4cCI6MjA1Njk3NzY1OX0.lxZJhKqhoMxR68utgVdiY8UDi3W1RKhvzFEMEOvb8ws"
-);
+const supabaseUrl = 'https://ivwubazshhwdwbcovuuk.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml2d3ViYXpzaGh3ZHdiY292dXVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0MDE2NTksImV4cCI6MjA1Njk3NzY1OX0.lxZJhKqhoMxR68utgVdiY8UDi3W1RKhvzFEMEOvb8ws';
+const supabase = supabaseClient.createClient(supabaseUrl, supabaseKey);
 
-console.log("Supabase initialized:", supabaseClient);
+console.log("Supabase initialized:", supabase);
 
 // Test Supabase connection
 async function testSupabase() {
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabase
         .from("scores")
         .select("*")
         .limit(1);
