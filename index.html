@@ -417,6 +417,58 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
+        // Handle mouse movement for grid highlighting
+function onMouseMove(event) {
+    event.preventDefault();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    highlightGrid();
+}
+
+// Handle mouse click for tower placement
+function onMouseClick(event) {
+    event.preventDefault();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    if (!gameState.selectedTower) return;
+    
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children);
+    
+    if (intersects.length > 0) {
+        // Find the first intersection that is a grid cell (terrain)
+        for (const intersect of intersects) {
+            const object = intersect.object;
+            
+            // Skip towers and their children when finding placement cells
+            let isTower = false;
+            for (const tower of gameState.towers) {
+                if (object === tower.mesh || tower.mesh.children.includes(object)) {
+                    isTower = true;
+                    break;
+                }
+            }
+            
+            if (!isTower) {
+                const cell = getCellFromPosition(object.position.x, object.position.z);
+                
+                if (cell && canPlaceTower(cell)) {
+                    placeTower(cell, gameState.selectedTower);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+// Add mouse event listeners for desktop
+if (!isTouchDevice()) {
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('click', onMouseClick);
+}
+        
         // Handle touch movement for grid highlighting
         function onTouchMove(event) {
             event.preventDefault();
