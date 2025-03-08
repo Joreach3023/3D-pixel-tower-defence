@@ -117,6 +117,15 @@
         #instructions button:hover {
             background-color: rgba(0, 150, 0, 0.7);
         }
+        #click-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -152,22 +161,23 @@
     </div>
     <button id="start-wave">Start Wave</button>
 
+    <!-- Click Prompt -->
+    <div id="click-prompt">Click anywhere to start</div>
+
     <!-- Audio Elements -->
     <audio id="canon-sound" src="assets/canon sound.wav" preload="auto"></audio>
     <audio id="click-sound" src="assets/click sound.wav" preload="auto"></audio>
     <audio id="enemy-death-sound" src="assets/enemies death sound.wav" preload="auto"></audio>
-    <audio id="game-music" src="assets/Game Music.mp3" loop preload="auto"></audio>
+    <audio id="game-music" src="assets/Game Music.mp3" preload="auto"></audio>
     <audio id="game-over-sound" src="assets/game over sound.wav" preload="auto"></audio>
     <audio id="laser-sound" src="assets/laser sound.wav" preload="auto"></audio>
     <audio id="sniper-sound" src="assets/sniper sound.wav" preload="auto"></audio>
-    <audio id="title-music" src="assets/Title Screen Music.mp3" loop preload="auto"></audio>
+    <audio id="title-music" src="assets/Title Screen Music.mp3" preload="auto"></audio>
     <audio id="upgrade-sound" src="assets/upgrade sound.wav" preload="auto"></audio>
 
-    <!-- Chargement de Three.js -->
+    <!-- Three.js and Game Script -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js"></script>
-    <!-- Chargement de OrbitControls.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
-
     <script>
         // Game state
         const gameState = {
@@ -185,6 +195,24 @@
         function isTouchDevice() {
             return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
         }
+
+        // Play title music on first user interaction (click anywhere on the page)
+        function playTitleMusic() {
+            const titleMusic = document.getElementById('title-music');
+            titleMusic.play();
+            titleMusic.loop = true; // Ensure the music loops
+
+            // Hide the click prompt
+            document.getElementById('click-prompt').style.display = 'none';
+
+            // Remove the event listener after the first interaction
+            document.removeEventListener('click', playTitleMusic);
+            document.removeEventListener('touchstart', playTitleMusic); // For mobile devices
+        }
+
+        // Add event listeners for both click and touchstart (for mobile devices)
+        document.addEventListener('click', playTitleMusic);
+        document.addEventListener('touchstart', playTitleMusic);
 
         // Tower types
         const towerTypes = {
@@ -229,6 +257,7 @@
                 ]
             }
         };
+
 
         // Enemy types
         const enemyTypes = {
@@ -1501,6 +1530,8 @@ if (!isTouchDevice()) {
         setupTowerUI();
         setupFastForwardButton();
 
+       // Enemy types, waves, scene setup, etc. (your existing code)
+
         // Main Menu Functions
         function startGame() {
             // Hide the main menu
@@ -1548,7 +1579,6 @@ if (!isTouchDevice()) {
         document.body.addEventListener('touchstart', function (event) {
             event.preventDefault();
         }, { passive: false });
-        
     </script>
 </body>
 </html>
