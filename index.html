@@ -1406,9 +1406,10 @@
             ffButton.style.borderRadius = '5px';
             ffButton.style.cursor = 'pointer';
             
-            let fastMode = false;
-            ffButton.addEventListener('click', () => {
-                fastMode = !fastMode;
+             // Use both touchstart and click events for mobile and desktop
+    const eventType = isTouchDevice() ? 'touchstart' : 'click';
+    ffButton.addEventListener(eventType, () => {
+        fastMode = !fastMode;
                 
                 if (fastMode) {
                     // Double game speed
